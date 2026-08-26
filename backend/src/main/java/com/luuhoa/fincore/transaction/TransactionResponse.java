@@ -10,6 +10,10 @@ public record TransactionResponse(
         UUID id,
         UUID walletId,
         String walletName,
+        UUID categoryId,
+        String categoryName,
+        String categoryIcon,
+        String categoryColor,
         TransactionType transactionType,
         TransactionStatus status,
         BigDecimal amount,
@@ -22,10 +26,15 @@ public record TransactionResponse(
 
     static TransactionResponse from(FinancialTransaction transaction, Wallet wallet) {
         FinancialTransaction reversedTransaction = transaction.getReversedTransaction();
+        var category = transaction.getCategory();
         return new TransactionResponse(
                 transaction.getId(),
                 wallet.getId(),
                 wallet.getName(),
+                category == null ? null : category.getId(),
+                category == null ? null : category.getName(),
+                category == null ? null : category.getIcon(),
+                category == null ? null : category.getColor(),
                 transaction.getTransactionType(),
                 transaction.getStatus(),
                 transaction.getAmount(),

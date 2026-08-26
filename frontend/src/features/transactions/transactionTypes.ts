@@ -7,6 +7,10 @@ export type Transaction = {
   id: string
   walletId: string
   walletName: string
+  categoryId: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
   transactionType: TransactionType
   status: TransactionStatus
   amount: number
@@ -20,6 +24,7 @@ export type Transaction = {
 
 export type CreateTransactionInput = {
   walletId: string
+  categoryId: string
   transactionType: 'INCOME' | 'EXPENSE'
   amount: number
   description: string

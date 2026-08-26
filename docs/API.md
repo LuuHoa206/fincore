@@ -122,6 +122,82 @@ Currency and balance are not editable through this endpoint.
 Returns `204 No Content`. The wallet is archived, not physically deleted, so
 future transaction history can continue to reference it.
 
+## Categories
+
+Category responses include system defaults (`systemCategory: true`) and the
+authenticated user's own active categories. System defaults are read-only;
+users can create, update, and archive only their own categories.
+
+### List available categories
+
+`GET /categories?type=EXPENSE`
+
+The optional `type` is `INCOME` or `EXPENSE`. Without it, both types are
+returned.
+
+### Create a category
+
+`POST /categories`
+
+```json
+{
+  "name": "Pet care",
+  "categoryType": "EXPENSE",
+  "icon": "paw-print",
+  "color": "#7C3AED"
+}
+```
+
+Names are unique per owner and category type, ignoring letter case.
+
+### Update or archive an owned category
+
+`PATCH /categories/{categoryId}` and `DELETE /categories/{categoryId}`
+
+Archive returns `204 No Content`. Archived categories cannot be selected for
+new transactions, while existing transaction history remains intact.
+
+## Transactions
+
+### List transactions
+
+`GET /transactions`
+
+Returns the latest 100 transactions owned by the authenticated user, including
+wallet and category display details.
+
+### Record income or expense
+
+`POST /transactions`
+
+```http
+Idempotency-Key: 4bf4c8cc-8c2d-4604-9262-8e7f64a967e1
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "transactionType": "EXPENSE",
+  "amount": 65000,
+  "description": "Lunch",
+  "notes": "Team meeting",
+  "occurredAt": "2026-08-26T05:30:00Z"
+}
+```
+
+Only `INCOME` and `EXPENSE` are currently accepted. The category must be
+visible to the user and have the matching type. Reusing the same
+`Idempotency-Key` returns the original recorded transaction instead of posting
+another balance change.
+
+### Reverse a transaction
+
+`POST /transactions/{transactionId}/reverse`
+
+The original transaction is marked reversed and a balanced counter-transaction
+is added. The original record is never deleted.
+
 ## Error format
 
 Validation and business errors share one response shape:

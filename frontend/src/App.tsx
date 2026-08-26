@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/auth/AuthContext'
 import { LoginPage } from './features/auth/AuthPage'
+import { CategoriesPage } from './features/categories/CategoriesPage'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { WalletsPage } from './features/wallets/WalletsPage'
@@ -19,6 +20,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="wallets" element={<WalletsPage />} />
+            <Route path="categories" element={<CategoriesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
           </Route>
         </Route>

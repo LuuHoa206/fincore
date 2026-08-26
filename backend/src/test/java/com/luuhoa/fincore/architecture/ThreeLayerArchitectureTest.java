@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import com.luuhoa.fincore.category.CategoryController;
+import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.identity.AuthController;
 import com.luuhoa.fincore.identity.AuthService;
 import com.luuhoa.fincore.identity.CurrentUserController;
@@ -24,6 +26,7 @@ class ThreeLayerArchitectureTest {
     void businessControllersDependOnServicesInsteadOfRepositories() {
         assertControllerUsesService(AuthController.class, AuthService.class);
         assertControllerUsesService(CurrentUserController.class, AuthService.class);
+        assertControllerUsesService(CategoryController.class, CategoryService.class);
         assertControllerUsesService(WalletController.class, WalletService.class);
         assertControllerUsesService(TransactionController.class, TransactionService.class);
     }
