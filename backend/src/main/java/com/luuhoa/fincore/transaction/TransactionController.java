@@ -1,6 +1,6 @@
 package com.luuhoa.fincore.transaction;
 
-import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -28,8 +28,15 @@ public class TransactionController {
     }
 
     @GetMapping
-    List<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt) {
-        return transactionService.list(userId(jwt));
+    TransactionPageResponse list(
+            @AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) TransactionType transactionType,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String query,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Instant from,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) Instant to,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") int size) {
+        return transactionService.search(userId(jwt), transactionType, query, from, to, page, size);
     }
 
     @PostMapping

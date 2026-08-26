@@ -45,4 +45,45 @@ public class TransactionReportingService {
                         total -> total.getTotalAmount() == null ? BigDecimal.ZERO : total.getTotalAmount(),
                         BigDecimal::add));
     }
+
+    @Transactional(readOnly = true)
+    public Map<String, CurrencyCashFlow> postedCashFlowByCurrency(UUID userId, Instant periodStart, Instant periodEnd) {
+        Map<String, CurrencyCashFlow> totals = new java.util.LinkedHashMap<>();
+        transactionRepository.summarizeAmountsByCurrencyAndType(
+                userId,
+                TransactionStatus.POSTED,
+                List.of(TransactionType.INCOME, TransactionType.EXPENSE),
+                periodStart,
+                periodEnd).forEach(total -> {
+                    CurrencyCashFlow current = totals.getOrDefault(total.getCurrency(), CurrencyCashFlow.empty(total.getCurrency()));
+                    totals.put(total.getCurrency(), total.getTransactionType() == TransactionType.INCOME
+                            ? current.withIncome(total.getTotalAmount(), total.getTransactionCount())
+                            : current.withExpense(total.getTotalAmount(), total.getTransactionCount()));
+                });
+        return Map.copyOf(totals);
+    }
+
+    public record CurrencyCashFlow(
+            String currency,
+            BigDecimal incomeAmount,
+            long incomeCount,
+            BigDecimal expenseAmount,
+            long expenseCount) {
+
+        public static CurrencyCashFlow empty(String currency) {
+            return new CurrencyCashFlow(currency, BigDecimal.ZERO, 0, BigDecimal.ZERO, 0);
+        }
+
+        CurrencyCashFlow withIncome(BigDecimal amount, long count) {
+            return new CurrencyCashFlow(currency, safeAmount(amount), count, expenseAmount, expenseCount);
+        }
+
+        CurrencyCashFlow withExpense(BigDecimal amount, long count) {
+            return new CurrencyCashFlow(currency, incomeAmount, incomeCount, safeAmount(amount), count);
+        }
+
+        private static BigDecimal safeAmount(BigDecimal amount) {
+            return amount == null ? BigDecimal.ZERO : amount;
+        }
+    }
 }

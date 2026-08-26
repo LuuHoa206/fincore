@@ -302,10 +302,16 @@ target, the API reports `COMPLETED` automatically.
 
 ### List transactions
 
-`GET /transactions`
+`GET /transactions?page=0&size=10&transactionType=EXPENSE&query=coffee`
 
-Returns the latest 100 transactions owned by the authenticated user, including
-wallet and category display details.
+All query parameters are optional. `page` is zero-based and `size` must be from
+1 to 50. `transactionType` can be any supported transaction type; `query`
+searches the description, notes, and category name. `from` and `to` accept ISO
+8601 timestamps, with `to` treated as exclusive.
+
+The response is a page object containing `content`, `page`, `size`,
+`totalElements`, and `totalPages`. Queries are owner-scoped and run at the
+database layer before the response is created.
 
 ### Record income or expense
 
@@ -338,6 +344,19 @@ another balance change.
 
 The original transaction is marked reversed and a balanced counter-transaction
 is added. The original record is never deleted.
+
+## Dashboard report
+
+### Get a financial dashboard
+
+`GET /reports/dashboard?period=2026-08`
+
+The optional `period` uses `YYYY-MM`; when omitted, the user's configured time
+zone determines the current month. The response contains per-currency wallet
+balances, jar allocations, monthly income and expense totals, active wallet/jar
+counts, budget alerts, open saving goals, and the five most recent transactions.
+Totals from different currencies are returned separately rather than converted
+with an unverified exchange rate.
 
 ## Error format
 

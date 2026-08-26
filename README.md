@@ -74,12 +74,14 @@ The frontend runs at `http://localhost:5173`; the backend runs at
 
 ## Current status
 
-The identity, wallet, transaction, category, money-jar, monthly-budget, and saving-goal milestones are complete. The
+The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, and reporting milestones are complete. The
 API supports account registration, login, rotating refresh tokens, owner-scoped
 wallet management, system and user-owned categories, virtual money-jar
 allocation with concurrency protection, monthly category budgets derived from
 posted expenses, saving goals derived from jar allocations, and immutable
 income/expense recording backed by balanced ledger entries and idempotency keys.
+The dashboard is server-composed from these modules and transaction history is
+filtered and paginated by the API instead of a client-side sample.
 
 Backend modules follow a documented three-layer MVC convention: controllers
 handle HTTP and DTO validation, services own business rules and transactions,

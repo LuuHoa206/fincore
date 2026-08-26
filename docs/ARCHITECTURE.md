@@ -62,6 +62,12 @@ TransactionController
 `ThreeLayerArchitectureTest` bao ve quy uoc nay: controller nghiep vu phai
 phu thuoc vao service, khong duoc inject repository.
 
+Luong `GET /api/v1/reports/dashboard` cung tuan theo quy uoc nay. `DashboardController`
+chi lay nguoi dung va tham so thang, `DashboardService` phoi hop cac public
+service cua wallet, money jar, budget, saving goal va transaction. Cac tong thu
+chi theo tien te duoc truy van boi `TransactionReportingService`; React chi
+hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
+
 ## Quy tac du lieu va transaction
 
 - Tat ca thay doi so du vi duoc thuc hien trong `@Transactional` service.
@@ -81,6 +87,11 @@ phu thuoc vao service, khong duoc inject repository.
 - Muc tieu tiet kiem lay tien da tich luy tu `allocatedBalance` cua mot hu tien.
   `SavingGoalService` goi public service cua module `moneyjar`, khong truy cap
   truc tiep repository cua module nay.
+- Dashboard tong hop so du vi, tien da phan bo, thu/chi theo tung loai tien,
+  canh bao ngan sach va muc tieu dang mo. He thong khong cong chung cac tien te
+  khac nhau khi chua co ty gia quy doi.
+- Lich su giao dich loc va phan trang tai database; client chi gui dieu kien va
+  trang can xem, khong tai toan bo lich su roi loc tai trinh duyet.
 
 ## Quy tac lien module
 

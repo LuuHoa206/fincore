@@ -1,9 +1,9 @@
 import { httpClient } from '../../shared/api/httpClient'
-import type { CreateTransactionInput, Transaction } from './transactionTypes'
+import type { CreateTransactionInput, Transaction, TransactionListParams, TransactionPage } from './transactionTypes'
 
 export const transactionApi = {
-  list: async () => {
-    const { data } = await httpClient.get<Transaction[]>('/transactions')
+  list: async (params: TransactionListParams = {}) => {
+    const { data } = await httpClient.get<TransactionPage>('/transactions', { params })
     return data
   },
   create: async (input: CreateTransactionInput, idempotencyKey: string) => {
