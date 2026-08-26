@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +27,8 @@ import com.luuhoa.fincore.wallet.WalletType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -118,6 +121,40 @@ class TransactionServiceTest {
         verify(ledgerEntryRepository, never()).saveAll(any());
     }
 
+    @Test
+    void searchesTransactionsOnTheServerAndReturnsPageMetadata() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        FinancialTransaction transaction = new FinancialTransaction(
+                user, null, TransactionType.EXPENSE, new BigDecimal("50000"), "VND", "Lunch", null, Instant.now(), null);
+        setId(transaction, UUID.randomUUID());
+        LedgerEntry entry = LedgerEntry.walletEntry(transaction, wallet, new BigDecimal("-50000"));
+        PageRequest pageRequest = PageRequest.of(1, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "occurredAt"));
+
+        when(transactionRepository.searchByUser(userId, TransactionType.EXPENSE, "lunch", null, null, pageRequest))
+                .thenReturn(new PageImpl<>(List.of(transaction), pageRequest, 11));
+        when(ledgerEntryRepository.findFirstByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET))
+                .thenReturn(Optional.of(entry));
+
+        TransactionPageResponse result = service.search(userId, TransactionType.EXPENSE, " lunch ", null, null, 1, 10);
+
+        assertThat(result.content()).singleElement().extracting(TransactionResponse::description).isEqualTo("Lunch");
+        assertThat(result.page()).isEqualTo(1);
+        assertThat(result.size()).isEqualTo(10);
+        assertThat(result.totalElements()).isEqualTo(11);
+        assertThat(result.totalPages()).isEqualTo(2);
+    }
+
+    @Test
+    void rejectsAnUnsafePageSizeBeforeQueryingTransactions() {
+        assertThatThrownBy(() -> service.search(UUID.randomUUID(), null, null, null, null, 0, 51))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("between 1 and 50");
+
+        verify(transactionRepository, never()).searchByUser(any(), any(), any(), any(), any(), any());
+    }
+
     private UserAccount user() {
         return new UserAccount(
                 "owner@example.com",
@@ -125,5 +162,11 @@ class TransactionServiceTest {
                 "Owner",
                 "VND",
                 "Asia/Ho_Chi_Minh");
+    }
+
+    private void setId(Object target, UUID id) throws Exception {
+        Field field = target.getClass().getDeclaredField("id");
+        field.setAccessible(true);
+        field.set(target, id);
     }
 }

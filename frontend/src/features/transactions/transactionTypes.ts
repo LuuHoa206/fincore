@@ -31,3 +31,18 @@ export type CreateTransactionInput = {
   notes?: string
   occurredAt: string
 }
+
+export type TransactionListParams = {
+  transactionType?: 'INCOME' | 'EXPENSE'
+  query?: string
+  page?: number
+  size?: number
+}
+
+export type TransactionPage = {
+  content: Transaction[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}

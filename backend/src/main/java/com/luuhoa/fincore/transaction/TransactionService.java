@@ -19,6 +19,8 @@ import com.luuhoa.fincore.wallet.WalletRepository;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 @Service
 public class TransactionService {
@@ -49,6 +51,47 @@ public class TransactionService {
         return transactionRepository.findTop100ByUserIdOrderByOccurredAtDesc(userId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> listRecent(UUID userId) {
+        return transactionRepository.findTop5ByUserIdOrderByOccurredAtDesc(userId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TransactionPageResponse search(
+            UUID userId,
+            TransactionType transactionType,
+            String query,
+            Instant fromTime,
+            Instant toTime,
+            int page,
+            int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("page must be zero or greater");
+        }
+        if (size < 1 || size > 50) {
+            throw new IllegalArgumentException("size must be between 1 and 50");
+        }
+        if (fromTime != null && toTime != null && !fromTime.isBefore(toTime)) {
+            throw new IllegalArgumentException("from must be before to");
+        }
+        String searchTerm = query == null || query.isBlank() ? null : query.trim();
+        var result = transactionRepository.searchByUser(
+                userId,
+                transactionType,
+                searchTerm,
+                fromTime,
+                toTime,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "occurredAt")));
+        return new TransactionPageResponse(
+                result.getContent().stream().map(this::toResponse).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages());
     }
 
     @Transactional

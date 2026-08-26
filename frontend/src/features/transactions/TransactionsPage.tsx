@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
@@ -33,10 +33,19 @@ export function TransactionsPage() {
   const [reverseTarget, setReverseTarget] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState<Filter>('ALL')
   const [query, setQuery] = useState('')
+  const [page, setPage] = useState(0)
   const [actionError, setActionError] = useState('')
   const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: () => categoryApi.list() })
-  const transactionsQuery = useQuery({ queryKey: ['transactions'], queryFn: transactionApi.list })
+  const transactionsQuery = useQuery({
+    queryKey: ['transactions', filter, query.trim(), page],
+    queryFn: () => transactionApi.list({
+      transactionType: filter === 'ALL' ? undefined : filter,
+      query: query.trim() || undefined,
+      page,
+      size: 10,
+    }),
+  })
   const reverseMutation = useMutation({
     mutationFn: transactionApi.reverse,
     onSuccess: () => {
@@ -47,15 +56,8 @@ export function TransactionsPage() {
     onError: (error) => setActionError(getApiErrorMessage(error, 'Không thể hoàn tác giao dịch.')),
   })
 
-  const visibleTransactions = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase('vi')
-    return (transactionsQuery.data ?? []).filter((transaction) => {
-      const matchesFilter = filter === 'ALL' || transaction.transactionType === filter
-      const matchesQuery = !normalized || [transaction.description, transaction.walletName, transaction.notes ?? '']
-        .some((value) => value.toLocaleLowerCase('vi').includes(normalized))
-      return matchesFilter && matchesQuery
-    })
-  }, [filter, query, transactionsQuery.data])
+  const visibleTransactions = transactionsQuery.data?.content ?? []
+  const totalTransactions = transactionsQuery.data?.totalElements ?? 0
 
   const canCreate = Boolean(walletsQuery.data?.length && categoriesQuery.data?.length)
 
@@ -73,10 +75,10 @@ export function TransactionsPage() {
 
     {canCreate && <section className="panel transactions-workspace">
       <div className="transaction-tools">
-        <label className="transaction-search"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo nội dung, ví tiền hoặc ghi chú" /></label>
+        <label className="transaction-search"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="Tìm theo nội dung, danh mục hoặc ghi chú" /></label>
         <div className="segmented-control" aria-label="Lọc loại giao dịch">
           {([{ value: 'ALL', label: 'Tất cả' }, { value: 'INCOME', label: 'Thu' }, { value: 'EXPENSE', label: 'Chi' }] as const).map((item) =>
-            <button key={item.value} className={filter === item.value ? 'selected' : ''} onClick={() => setFilter(item.value)}>{item.label}</button>,
+            <button key={item.value} className={filter === item.value ? 'selected' : ''} onClick={() => { setFilter(item.value); setPage(0) }}>{item.label}</button>,
           )}
         </div>
       </div>
@@ -84,9 +86,9 @@ export function TransactionsPage() {
       {transactionsQuery.isPending && <div className="content-state compact-state"><LoaderCircle className="spin" /><span>Đang tải giao dịch</span></div>}
       {transactionsQuery.isError && <div className="content-state compact-state error-state"><CircleAlert /><strong>Chưa thể tải giao dịch</strong><p>{getApiErrorMessage(transactionsQuery.error, 'Vui lòng thử lại.')}</p><button className="secondary-button" onClick={() => void transactionsQuery.refetch()}>Thử lại</button></div>}
       {!transactionsQuery.isPending && !transactionsQuery.isError && visibleTransactions.length === 0 && <div className="content-state compact-state"><FileText /><strong>Chưa có giao dịch phù hợp</strong><p>{query || filter !== 'ALL' ? 'Thử thay đổi điều kiện tìm kiếm hoặc bộ lọc.' : 'Bắt đầu bằng khoản thu hoặc chi đầu tiên của bạn.'}</p></div>}
-      {!!visibleTransactions.length && <div className="transaction-table-wrap"><table className="transaction-table"><thead><tr><th>Giao dịch</th><th>Danh mục</th><th>Ví tiền</th><th>Thời gian</th><th>Trạng thái</th><th className="numeric-cell">Số tiền</th><th aria-label="Thao tác" /></tr></thead><tbody>
+      {!!visibleTransactions.length && <><div className="transaction-table-wrap"><table className="transaction-table"><thead><tr><th>Giao dịch</th><th>Danh mục</th><th>Ví tiền</th><th>Thời gian</th><th>Trạng thái</th><th className="numeric-cell">Số tiền</th><th aria-label="Thao tác" /></tr></thead><tbody>
         {visibleTransactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} onReverse={() => setReverseTarget(transaction)} />)}
-      </tbody></table></div>}
+      </tbody></table></div><TransactionPagination page={transactionsQuery.data?.page ?? 0} totalPages={transactionsQuery.data?.totalPages ?? 0} totalElements={totalTransactions} onChange={setPage} /></>}
     </section>}
 
     {formOpen && walletsQuery.data && categoriesQuery.data && <TransactionFormModal wallets={walletsQuery.data} categories={categoriesQuery.data} onClose={() => setFormOpen(false)} onSaved={() => {
@@ -96,6 +98,14 @@ export function TransactionsPage() {
     }} />}
     {reverseTarget && <ReverseModal transaction={reverseTarget} isPending={reverseMutation.isPending} onCancel={() => setReverseTarget(null)} onConfirm={() => reverseMutation.mutate(reverseTarget.id)} />}
   </>
+}
+
+function TransactionPagination({ page, totalPages, totalElements, onChange }: { page: number; totalPages: number; totalElements: number; onChange: (page: number) => void }) {
+  if (totalPages <= 1) return null
+  return <nav className="transaction-pagination" aria-label="Phân trang giao dịch">
+    <span>{totalElements} giao dịch</span>
+    <div><button className="icon-button" onClick={() => onChange(page - 1)} disabled={page === 0} aria-label="Trang trước"><ChevronLeft /></button><span>Trang {page + 1} / {totalPages}</span><button className="icon-button" onClick={() => onChange(page + 1)} disabled={page + 1 >= totalPages} aria-label="Trang sau"><ChevronRight /></button></div>
+  </nav>
 }
 
 function TransactionRow({ transaction, onReverse }: { transaction: Transaction; onReverse: () => void }) {
