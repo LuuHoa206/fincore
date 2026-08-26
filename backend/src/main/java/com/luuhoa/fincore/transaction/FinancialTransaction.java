@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.identity.UserAccount;
 
 import jakarta.persistence.Column;
@@ -29,6 +30,10 @@ public class FinancialTransaction {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private UserAccount user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false, length = 30)
@@ -71,6 +76,7 @@ public class FinancialTransaction {
 
     public FinancialTransaction(
             UserAccount user,
+            Category category,
             TransactionType transactionType,
             BigDecimal amount,
             String currency,
@@ -79,6 +85,7 @@ public class FinancialTransaction {
             Instant occurredAt,
             String idempotencyKey) {
         this.user = user;
+        this.category = category;
         this.transactionType = transactionType;
         this.status = TransactionStatus.POSTED;
         this.amount = amount;
@@ -93,6 +100,7 @@ public class FinancialTransaction {
     public static FinancialTransaction reversalOf(FinancialTransaction original, UserAccount user) {
         FinancialTransaction reversal = new FinancialTransaction(
                 user,
+                original.category,
                 TransactionType.REVERSAL,
                 original.amount,
                 original.currency,
@@ -105,6 +113,7 @@ public class FinancialTransaction {
     }
 
     public UUID getId() { return id; }
+    public Category getCategory() { return category; }
     public TransactionType getTransactionType() { return transactionType; }
     public TransactionStatus getStatus() { return status; }
     public BigDecimal getAmount() { return amount; }

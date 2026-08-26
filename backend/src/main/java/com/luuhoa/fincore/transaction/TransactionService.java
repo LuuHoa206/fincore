@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+import com.luuhoa.fincore.category.Category;
+import com.luuhoa.fincore.category.CategoryService;
+import com.luuhoa.fincore.category.CategoryType;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -26,16 +29,19 @@ public class TransactionService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final WalletRepository walletRepository;
     private final UserAccountRepository userRepository;
+    private final CategoryService categoryService;
 
     public TransactionService(
             FinancialTransactionRepository transactionRepository,
             LedgerEntryRepository ledgerEntryRepository,
             WalletRepository walletRepository,
-            UserAccountRepository userRepository) {
+            UserAccountRepository userRepository,
+            CategoryService categoryService) {
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.walletRepository = walletRepository;
         this.userRepository = userRepository;
+        this.categoryService = categoryService;
     }
 
     @Transactional(readOnly = true)
@@ -63,12 +69,17 @@ public class TransactionService {
         UserAccount user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
         Wallet wallet = requireOwnedWalletForUpdate(userId, request.walletId());
+        Category category = categoryService.requireAvailableForTransaction(
+                userId,
+                request.categoryId(),
+                categoryTypeFor(request.transactionType()));
         BigDecimal amount = validateAndNormalizeAmount(request.amount(), wallet.getCurrency());
         BigDecimal walletChange = request.transactionType() == TransactionType.INCOME ? amount : amount.negate();
 
         wallet.applyBalance(walletChange);
         FinancialTransaction transaction = new FinancialTransaction(
                 user,
+                category,
                 request.transactionType(),
                 amount,
                 wallet.getCurrency(),
@@ -151,5 +162,9 @@ public class TransactionService {
             return null;
         }
         return notes.trim();
+    }
+
+    private CategoryType categoryTypeFor(TransactionType transactionType) {
+        return transactionType == TransactionType.INCOME ? CategoryType.INCOME : CategoryType.EXPENSE;
     }
 }

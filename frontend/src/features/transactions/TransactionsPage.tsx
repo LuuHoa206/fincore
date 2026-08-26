@@ -1,10 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownLeft, ArrowUpRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
+import { categoryApi } from '../categories/categoryApi'
+import type { Category } from '../categories/categoryTypes'
 import { walletApi } from '../wallets/walletApi'
 import type { Wallet } from '../wallets/walletTypes'
 import { transactionApi } from './transactionApi'
@@ -15,6 +17,7 @@ type Filter = 'ALL' | 'INCOME' | 'EXPENSE'
 
 const transactionSchema = z.object({
   walletId: z.string().uuid('Hãy chọn một ví'),
+  categoryId: z.string().uuid('Hãy chọn một danh mục'),
   transactionType: z.enum(['INCOME', 'EXPENSE']),
   amount: z.coerce.number().positive('Số tiền phải lớn hơn 0').finite(),
   description: z.string().trim().min(2, 'Nội dung cần ít nhất 2 ký tự').max(255),
@@ -32,6 +35,7 @@ export function TransactionsPage() {
   const [query, setQuery] = useState('')
   const [actionError, setActionError] = useState('')
   const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
+  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: () => categoryApi.list() })
   const transactionsQuery = useQuery({ queryKey: ['transactions'], queryFn: transactionApi.list })
   const reverseMutation = useMutation({
     mutationFn: transactionApi.reverse,
@@ -53,17 +57,19 @@ export function TransactionsPage() {
     })
   }, [filter, query, transactionsQuery.data])
 
-  const canCreate = Boolean(walletsQuery.data?.length)
+  const canCreate = Boolean(walletsQuery.data?.length && categoriesQuery.data?.length)
 
   return <>
     <header className="topbar transaction-topbar">
       <div><p className="eyebrow">DÒNG TIỀN HẰNG NGÀY</p><h1>Giao dịch</h1><p className="page-subtitle">Ghi nhận thu nhập và chi tiêu theo từng ví. Số dư được cập nhật ngay sau khi giao dịch được tạo.</p></div>
-      <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy tạo ví trước'}><Plus /> Thêm giao dịch</button>
+      <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
     </header>
 
     {actionError && <div className="form-alert page-alert" role="alert">{actionError}<button onClick={() => setActionError('')} aria-label="Đóng"><X /></button></div>}
     {walletsQuery.isError && <div className="form-alert page-alert" role="alert">{getApiErrorMessage(walletsQuery.error, 'Không thể tải danh sách ví.')}</div>}
+    {categoriesQuery.isError && <div className="form-alert page-alert" role="alert">{getApiErrorMessage(categoriesQuery.error, 'Không thể tải danh mục.')}</div>}
     {!walletsQuery.isPending && !walletsQuery.data?.length && <section className="content-state"><WalletCards /><strong>Chưa có ví để ghi giao dịch</strong><p>Tạo ít nhất một ví tiền trước khi thêm khoản thu hoặc chi đầu tiên.</p></section>}
+    {!categoriesQuery.isPending && !categoriesQuery.data?.length && <section className="content-state"><FileText /><strong>Chưa có danh mục để ghi giao dịch</strong><p>Hãy tạo một danh mục thu hoặc chi trước khi ghi nhận giao dịch.</p></section>}
 
     {canCreate && <section className="panel transactions-workspace">
       <div className="transaction-tools">
@@ -78,12 +84,12 @@ export function TransactionsPage() {
       {transactionsQuery.isPending && <div className="content-state compact-state"><LoaderCircle className="spin" /><span>Đang tải giao dịch</span></div>}
       {transactionsQuery.isError && <div className="content-state compact-state error-state"><CircleAlert /><strong>Chưa thể tải giao dịch</strong><p>{getApiErrorMessage(transactionsQuery.error, 'Vui lòng thử lại.')}</p><button className="secondary-button" onClick={() => void transactionsQuery.refetch()}>Thử lại</button></div>}
       {!transactionsQuery.isPending && !transactionsQuery.isError && visibleTransactions.length === 0 && <div className="content-state compact-state"><FileText /><strong>Chưa có giao dịch phù hợp</strong><p>{query || filter !== 'ALL' ? 'Thử thay đổi điều kiện tìm kiếm hoặc bộ lọc.' : 'Bắt đầu bằng khoản thu hoặc chi đầu tiên của bạn.'}</p></div>}
-      {!!visibleTransactions.length && <div className="transaction-table-wrap"><table className="transaction-table"><thead><tr><th>Giao dịch</th><th>Ví tiền</th><th>Thời gian</th><th>Trạng thái</th><th className="numeric-cell">Số tiền</th><th aria-label="Thao tác" /></tr></thead><tbody>
+      {!!visibleTransactions.length && <div className="transaction-table-wrap"><table className="transaction-table"><thead><tr><th>Giao dịch</th><th>Danh mục</th><th>Ví tiền</th><th>Thời gian</th><th>Trạng thái</th><th className="numeric-cell">Số tiền</th><th aria-label="Thao tác" /></tr></thead><tbody>
         {visibleTransactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} onReverse={() => setReverseTarget(transaction)} />)}
       </tbody></table></div>}
     </section>}
 
-    {formOpen && walletsQuery.data && <TransactionFormModal wallets={walletsQuery.data} onClose={() => setFormOpen(false)} onSaved={() => {
+    {formOpen && walletsQuery.data && categoriesQuery.data && <TransactionFormModal wallets={walletsQuery.data} categories={categoriesQuery.data} onClose={() => setFormOpen(false)} onSaved={() => {
       setFormOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
       void queryClient.invalidateQueries({ queryKey: ['wallets'] })
@@ -100,6 +106,7 @@ function TransactionRow({ transaction, onReverse }: { transaction: Transaction; 
 
   return <tr>
     <td><div className="transaction-primary"><span className={`transaction-icon ${isIncome ? 'is-income' : ''}`}>{isIncome ? <ArrowDownLeft /> : <ArrowUpRight />}</span><div><strong>{transaction.description}</strong><small>{typeLabel[transaction.transactionType]}{transaction.notes ? ` · ${transaction.notes}` : ''}</small></div></div></td>
+    <td><span className="category-name"><i style={{ backgroundColor: transaction.categoryColor ?? undefined }} />{transaction.categoryName ?? 'Chưa phân loại'}</span></td>
     <td>{transaction.walletName}</td>
     <td><time>{formatDateTime(transaction.occurredAt)}</time></td>
     <td><span className={`status-pill ${transaction.status.toLowerCase()}`}>{statusLabel(transaction.status)}</span></td>
@@ -108,15 +115,23 @@ function TransactionRow({ transaction, onReverse }: { transaction: Transaction; 
   </tr>
 }
 
-function TransactionFormModal({ wallets, onClose, onSaved }: { wallets: Wallet[]; onClose: () => void; onSaved: () => void }) {
+function TransactionFormModal({ wallets, categories, onClose, onSaved }: { wallets: Wallet[]; categories: Category[]; onClose: () => void; onSaved: () => void }) {
   const [submitError, setSubmitError] = useState('')
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: { walletId: wallets[0]?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue() },
+    defaultValues: { walletId: wallets[0]?.id, categoryId: categories.find((category) => category.categoryType === 'EXPENSE')?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue() },
   })
   const selectedWalletId = watch('walletId')
   const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId)
   const selectedType = watch('transactionType')
+  const selectedCategoryId = watch('categoryId')
+  const availableCategories = categories.filter((category) => category.categoryType === selectedType)
+
+  useEffect(() => {
+    if (!availableCategories.some((category) => category.id === selectedCategoryId)) {
+      setValue('categoryId', availableCategories[0]?.id ?? '', { shouldValidate: true })
+    }
+  }, [availableCategories, selectedCategoryId, setValue])
 
   const onSubmit = handleSubmit(async (rawValues) => {
     setSubmitError('')
@@ -136,6 +151,7 @@ function TransactionFormModal({ wallets, onClose, onSaved }: { wallets: Wallet[]
       {submitError && <div className="form-alert" role="alert">{submitError}</div>}
       <fieldset className="type-toggle"><legend>Loại giao dịch</legend><label className={selectedType === 'EXPENSE' ? 'active-expense' : ''}><input type="radio" value="EXPENSE" {...register('transactionType')} /><ArrowUpRight /> Chi tiền</label><label className={selectedType === 'INCOME' ? 'active-income' : ''}><input type="radio" value="INCOME" {...register('transactionType')} /><ArrowDownLeft /> Thu tiền</label></fieldset>
       <div className="form-row"><label><span>Ví tiền</span><select {...register('walletId')}>{wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name} · {formatCurrency(wallet.currentBalance, wallet.currency)}</option>)}</select>{errors.walletId && <small className="field-error">{errors.walletId.message}</small>}</label><label><span>Số tiền {selectedWallet ? `(${selectedWallet.currency})` : ''}</span><input type="number" min="1" step={selectedWallet?.currency === 'VND' ? '1' : '0.01'} placeholder="0" {...register('amount')} />{errors.amount && <small className="field-error">{errors.amount.message}</small>}</label></div>
+      <label><span>Danh mục</span><select {...register('categoryId')}>{availableCategories.map((category) => <option key={category.id} value={category.id}>{category.name}{category.systemCategory ? ' · Mặc định' : ''}</option>)}</select>{errors.categoryId && <small className="field-error">{errors.categoryId.message}</small>}</label>
       <label><span>Nội dung</span><input placeholder={selectedType === 'INCOME' ? 'Ví dụ: Lương tháng 8' : 'Ví dụ: Ăn trưa'} {...register('description')} />{errors.description && <small className="field-error">{errors.description.message}</small>}</label>
       <label><span>Thời gian giao dịch</span><input type="datetime-local" {...register('occurredAt')} />{errors.occurredAt && <small className="field-error">{errors.occurredAt.message}</small>}</label>
       <label><span>Ghi chú</span><textarea placeholder="Không bắt buộc" {...register('notes')} /></label>
