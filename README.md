@@ -74,7 +74,12 @@ The frontend runs at `http://localhost:5173`; the backend runs at
 
 ## Current status
 
-Foundation and the first backend milestone are complete. The API now supports
-account registration, login, rotating refresh tokens, the current-user profile,
-and owner-scoped wallet management. The next milestone is the immutable
-transaction ledger and idempotent income/expense recording.
+The identity, wallet, and transaction milestones are complete. The API supports
+account registration, login, rotating refresh tokens, owner-scoped wallet
+management, and immutable income/expense recording backed by balanced ledger
+entries and idempotency keys. The next milestone is categories, money jars, and
+monthly budgets.
+
+Backend modules follow a documented three-layer MVC convention: controllers
+handle HTTP and DTO validation, services own business rules and transactions,
+and repositories isolate data access. See [Architecture](docs/ARCHITECTURE.md).
