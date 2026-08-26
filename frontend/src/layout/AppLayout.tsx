@@ -1,4 +1,4 @@
-import { ArrowLeftRight, CircleDollarSign, LayoutDashboard, LogOut, Menu, Tag, WalletCards, X } from 'lucide-react'
+import { ArrowLeftRight, ChartNoAxesCombined, CircleDollarSign, LayoutDashboard, LogOut, Menu, Tag, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
@@ -25,6 +25,7 @@ export function AppLayout() {
           <NavLink to="/wallets" onClick={() => setMobileNavOpen(false)}><WalletCards /> Ví tiền</NavLink>
           <NavLink to="/categories" onClick={() => setMobileNavOpen(false)}><Tag /> Danh mục</NavLink>
           <NavLink to="/transactions" onClick={() => setMobileNavOpen(false)}><ArrowLeftRight /> Giao dịch</NavLink>
+          <NavLink to="/budgets" onClick={() => setMobileNavOpen(false)}><ChartNoAxesCombined /> Ngân sách</NavLink>
         </nav>
         <button className="settings-link logout-link" onClick={() => void logout()}><LogOut /> Đăng xuất</button>
         <div className="sidebar-profile">
