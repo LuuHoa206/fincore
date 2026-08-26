@@ -75,6 +75,9 @@ phu thuoc vao service, khong duoc inject repository.
   da gan cho cac hu khong vuot qua so du vi thuc te cung loai tien.
 - Phan bo va giai phong hu chi tao `jar_movements`, khong lam thay doi so du
   vi. Vi vay tong tai san khong bi dem hai lan.
+- Ngan sach khong luu tru truong "da chi" de tranh sai lech du lieu. `BudgetService`
+  lay tong giao dich `EXPENSE` co trang thai `POSTED` trong dung thang, dung danh
+  muc va dung loai tien thong qua `TransactionReportingService`.
 
 ## Quy tac lien module
 

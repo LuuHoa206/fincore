@@ -23,7 +23,8 @@ quá tiền khả dụng mà người dùng cho phép phân bổ.
 ## Nhóm kế hoạch
 
 - `categories`: danh mục thu và chi.
-- `budgets`: giới hạn chi theo tháng và danh mục.
+- `budgets`: giới hạn chi theo tháng và danh mục; số đã chi được tổng hợp từ
+  `financial_transactions`, không lưu trùng trong bảng ngân sách.
 - `saving_goals`: mục tiêu tiết kiệm, thường liên kết với một hũ.
 - `recurring_rules`: lịch tạo nhắc nhở hoặc giao dịch định kỳ.
 

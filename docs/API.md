@@ -222,6 +222,47 @@ unassigned.
 The amount becomes available for another jar. The release is blocked if it
 would make a non-negative jar balance fall below zero.
 
+## Monthly budgets
+
+A budget belongs to one expense category and one calendar month. Its actual
+spending is derived from posted expense transactions, never accepted from the
+client as an editable amount.
+
+### List a month
+
+`GET /budgets?period=2026-08`
+
+The optional `period` uses `YYYY-MM`; if omitted, the API uses the authenticated
+user's configured time zone to select the current month.
+
+Each response includes `limitAmount`, `spentAmount`, `remainingAmount`,
+`usagePercentage`, and status `ON_TRACK`, `WARNING`, or `EXCEEDED`.
+
+### Create a budget
+
+`POST /budgets`
+
+```json
+{
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "periodStart": "2026-08-01",
+  "limitAmount": 3000000,
+  "currency": "VND",
+  "warningThreshold": 80
+}
+```
+
+`periodStart` must be the first day of a month. Only an available `EXPENSE`
+category can be used. An active budget is unique per user, category, and month.
+
+### Update or archive a budget
+
+`PATCH /budgets/{budgetId}` and `DELETE /budgets/{budgetId}`
+
+Only `limitAmount` and `warningThreshold` are editable. Archive returns `204 No
+Content`; it preserves historical transactions and allows a new plan to be
+created for the same category and month later.
+
 ## Transactions
 
 ### List transactions
