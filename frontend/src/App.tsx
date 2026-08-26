@@ -4,6 +4,7 @@ import { LoginPage } from './features/auth/AuthPage'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { WalletsPage } from './features/wallets/WalletsPage'
+import { TransactionsPage } from './features/transactions/TransactionsPage'
 import { AppLayout } from './layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import './App.css'
@@ -18,6 +19,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route index element={<DashboardPage />} />
             <Route path="wallets" element={<WalletsPage />} />
+            <Route path="transactions" element={<TransactionsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
