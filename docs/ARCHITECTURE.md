@@ -78,6 +78,9 @@ phu thuoc vao service, khong duoc inject repository.
 - Ngan sach khong luu tru truong "da chi" de tranh sai lech du lieu. `BudgetService`
   lay tong giao dich `EXPENSE` co trang thai `POSTED` trong dung thang, dung danh
   muc va dung loai tien thong qua `TransactionReportingService`.
+- Muc tieu tiet kiem lay tien da tich luy tu `allocatedBalance` cua mot hu tien.
+  `SavingGoalService` goi public service cua module `moneyjar`, khong truy cap
+  truc tiep repository cua module nay.
 
 ## Quy tac lien module
 

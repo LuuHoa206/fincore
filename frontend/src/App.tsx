@@ -3,6 +3,7 @@ import { AuthProvider } from './features/auth/AuthContext'
 import { LoginPage } from './features/auth/AuthPage'
 import { CategoriesPage } from './features/categories/CategoriesPage'
 import { BudgetsPage } from './features/budgets/BudgetsPage'
+import { SavingGoalsPage } from './features/savinggoals/SavingGoalsPage'
 import { MoneyJarsPage } from './features/moneyjars/MoneyJarsPage'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
@@ -24,6 +25,7 @@ function App() {
             <Route path="wallets" element={<WalletsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="budgets" element={<BudgetsPage />} />
+            <Route path="goals" element={<SavingGoalsPage />} />
             <Route path="jars" element={<MoneyJarsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
           </Route>
