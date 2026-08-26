@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
+import com.luuhoa.fincore.shared.api.ConflictException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -121,6 +122,15 @@ public class Wallet {
 
     public void archive() {
         this.archived = true;
+        this.updatedAt = Instant.now();
+    }
+
+    public void applyBalance(BigDecimal signedAmount) {
+        BigDecimal nextBalance = currentBalance.add(signedAmount);
+        if (!allowNegative && nextBalance.signum() < 0) {
+            throw new ConflictException("INSUFFICIENT_FUNDS", "This wallet does not have enough available balance");
+        }
+        this.currentBalance = nextBalance;
         this.updatedAt = Instant.now();
     }
 }
