@@ -10,12 +10,14 @@ import java.util.UUID;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
+import com.luuhoa.fincore.allocationrule.AllocationRuleService;
+import com.luuhoa.fincore.allocationrule.IncomeAllocationPlan;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.wallet.Wallet;
-import com.luuhoa.fincore.wallet.WalletRepository;
+import com.luuhoa.fincore.wallet.WalletService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,21 +31,24 @@ public class TransactionService {
 
     private final FinancialTransactionRepository transactionRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
-    private final WalletRepository walletRepository;
+    private final WalletService walletService;
     private final UserAccountRepository userRepository;
     private final CategoryService categoryService;
+    private final AllocationRuleService allocationRuleService;
 
     public TransactionService(
             FinancialTransactionRepository transactionRepository,
             LedgerEntryRepository ledgerEntryRepository,
-            WalletRepository walletRepository,
+            WalletService walletService,
             UserAccountRepository userRepository,
-            CategoryService categoryService) {
+            CategoryService categoryService,
+            AllocationRuleService allocationRuleService) {
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
-        this.walletRepository = walletRepository;
+        this.walletService = walletService;
         this.userRepository = userRepository;
         this.categoryService = categoryService;
+        this.allocationRuleService = allocationRuleService;
     }
 
     @Transactional(readOnly = true)
@@ -111,7 +116,14 @@ public class TransactionService {
 
         UserAccount user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
-        Wallet wallet = requireOwnedWalletForUpdate(userId, request.walletId());
+        boolean applyAllocationRule = request.transactionType() == TransactionType.INCOME
+                && Boolean.TRUE.equals(request.applyAllocationRule());
+        IncomeAllocationPlan allocationPlan = applyAllocationRule
+                ? allocationRuleService.prepareIncomeAllocation(userId, request.walletId(), request.amount())
+                : null;
+        Wallet wallet = allocationPlan == null
+                ? walletService.requireOwnedWalletForTransaction(userId, request.walletId())
+                : allocationPlan.wallet();
         Category category = categoryService.requireAvailableForTransaction(
                 userId,
                 request.categoryId(),
@@ -134,6 +146,9 @@ public class TransactionService {
         ledgerEntryRepository.saveAll(List.of(
                 LedgerEntry.walletEntry(transaction, wallet, walletChange),
                 LedgerEntry.externalEntry(transaction, EXTERNAL_ACCOUNT, walletChange.negate(), wallet.getCurrency())));
+        if (allocationPlan != null) {
+            allocationRuleService.applyIncomeAllocation(allocationPlan, transaction);
+        }
 
         return TransactionResponse.from(transaction, wallet);
     }
@@ -150,7 +165,7 @@ public class TransactionService {
         LedgerEntry originalWalletEntry = ledgerEntryRepository.findFirstByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET)
                 .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found"));
         Wallet originalWallet = originalWalletEntry.getWallet();
-        Wallet wallet = requireOwnedWalletForUpdate(userId, originalWallet.getId());
+        Wallet wallet = walletService.requireOwnedWalletForTransaction(userId, originalWallet.getId());
         BigDecimal reversalAmount = originalWalletEntry.getSignedAmount().negate();
 
         wallet.applyBalance(reversalAmount);
@@ -173,11 +188,6 @@ public class TransactionService {
     private UserAccount requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
-    }
-
-    private Wallet requireOwnedWalletForUpdate(UUID userId, UUID walletId) {
-        return walletRepository.findOwnedForUpdate(walletId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("WALLET_NOT_FOUND", "Wallet was not found"));
     }
 
     private BigDecimal validateAndNormalizeAmount(BigDecimal requestedAmount, String currencyCode) {

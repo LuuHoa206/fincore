@@ -23,6 +23,7 @@ const transactionSchema = z.object({
   description: z.string().trim().min(2, 'Nội dung cần ít nhất 2 ký tự').max(255),
   notes: z.string().trim().max(4000).optional(),
   occurredAt: z.string().min(1, 'Hãy chọn thời gian giao dịch'),
+  applyAllocationRule: z.boolean().optional(),
 })
 
 type TransactionForm = z.input<typeof transactionSchema>
@@ -129,7 +130,7 @@ function TransactionFormModal({ wallets, categories, onClose, onSaved }: { walle
   const [submitError, setSubmitError] = useState('')
   const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: { walletId: wallets[0]?.id, categoryId: categories.find((category) => category.categoryType === 'EXPENSE')?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue() },
+    defaultValues: { walletId: wallets[0]?.id, categoryId: categories.find((category) => category.categoryType === 'EXPENSE')?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue(), applyAllocationRule: false },
   })
   const selectedWalletId = useWatch({ control, name: 'walletId' })
   const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId)
@@ -163,6 +164,7 @@ function TransactionFormModal({ wallets, categories, onClose, onSaved }: { walle
       <div className="form-row"><label><span>Ví tiền</span><select {...register('walletId')}>{wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name} · {formatCurrency(wallet.currentBalance, wallet.currency)}</option>)}</select>{errors.walletId && <small className="field-error">{errors.walletId.message}</small>}</label><label><span>Số tiền {selectedWallet ? `(${selectedWallet.currency})` : ''}</span><input type="number" min="1" step={selectedWallet?.currency === 'VND' ? '1' : '0.01'} placeholder="0" {...register('amount')} />{errors.amount && <small className="field-error">{errors.amount.message}</small>}</label></div>
       <label><span>Danh mục</span><select {...register('categoryId')}>{availableCategories.map((category) => <option key={category.id} value={category.id}>{category.name}{category.systemCategory ? ' · Mặc định' : ''}</option>)}</select>{errors.categoryId && <small className="field-error">{errors.categoryId.message}</small>}</label>
       <label><span>Nội dung</span><input placeholder={selectedType === 'INCOME' ? 'Ví dụ: Lương tháng 8' : 'Ví dụ: Ăn trưa'} {...register('description')} />{errors.description && <small className="field-error">{errors.description.message}</small>}</label>
+      {selectedType === 'INCOME' && <label className="check-row"><input type="checkbox" {...register('applyAllocationRule')} /><span><strong>Tự chia vào các hũ theo quy tắc</strong><small>Nếu ví có quy tắc đang bật, phần trăm đã thiết lập sẽ được ghi nhận cùng khoản thu này.</small></span></label>}
       <label><span>Thời gian giao dịch</span><input type="datetime-local" {...register('occurredAt')} />{errors.occurredAt && <small className="field-error">{errors.occurredAt.message}</small>}</label>
       <label><span>Ghi chú</span><textarea placeholder="Không bắt buộc" {...register('notes')} /></label>
       <footer><button type="button" className="plain-button" onClick={onClose}>Hủy</button><button className="primary-button" disabled={isSubmitting}>{isSubmitting ? <LoaderCircle className="spin" /> : <>{selectedType === 'INCOME' ? 'Ghi nhận khoản thu' : 'Ghi nhận khoản chi'}</>}</button></footer>

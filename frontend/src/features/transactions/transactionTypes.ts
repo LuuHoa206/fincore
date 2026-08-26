@@ -30,6 +30,7 @@ export type CreateTransactionInput = {
   description: string
   notes?: string
   occurredAt: string
+  applyAllocationRule?: boolean
 }
 
 export type TransactionListParams = {

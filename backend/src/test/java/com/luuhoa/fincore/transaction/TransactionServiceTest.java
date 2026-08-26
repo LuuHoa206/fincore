@@ -17,11 +17,13 @@ import java.util.UUID;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
+import com.luuhoa.fincore.allocationrule.AllocationRuleService;
+import com.luuhoa.fincore.allocationrule.IncomeAllocationPlan;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.wallet.Wallet;
-import com.luuhoa.fincore.wallet.WalletRepository;
+import com.luuhoa.fincore.wallet.WalletService;
 import com.luuhoa.fincore.wallet.WalletType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -43,7 +45,7 @@ class TransactionServiceTest {
     private LedgerEntryRepository ledgerEntryRepository;
 
     @Mock
-    private WalletRepository walletRepository;
+    private WalletService walletService;
 
     @Mock
     private UserAccountRepository userRepository;
@@ -51,11 +53,14 @@ class TransactionServiceTest {
     @Mock
     private CategoryService categoryService;
 
+    @Mock
+    private AllocationRuleService allocationRuleService;
+
     private TransactionService service;
 
     @BeforeEach
     void setUp() {
-        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletRepository, userRepository, categoryService);
+        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletService, userRepository, categoryService, allocationRuleService);
     }
 
     @SuppressWarnings("unchecked")
@@ -74,10 +79,11 @@ class TransactionServiceTest {
                 new BigDecimal("15000000"),
                 "August salary",
                 null,
-                Instant.parse("2026-08-26T09:00:00Z"));
+                Instant.parse("2026-08-26T09:00:00Z"),
+                false);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(walletRepository.findOwnedForUpdate(walletId, userId)).thenReturn(Optional.of(wallet));
+        when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME)).thenReturn(category);
 
         service.create(userId, request, "income-2026-08-26");
@@ -106,10 +112,11 @@ class TransactionServiceTest {
                 new BigDecimal("100000"),
                 "Lunch",
                 null,
-                Instant.now());
+                Instant.now(),
+                false);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(walletRepository.findOwnedForUpdate(walletId, userId)).thenReturn(Optional.of(wallet));
+        when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.EXPENSE)).thenReturn(category);
 
         assertThatThrownBy(() -> service.create(userId, request, "expense-2026-08-26"))
@@ -119,6 +126,32 @@ class TransactionServiceTest {
         assertThat(wallet.getCurrentBalance()).isEqualByComparingTo(BigDecimal.ZERO);
         verify(transactionRepository, never()).save(any());
         verify(ledgerEntryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void appliesThePreparedAllocationRuleOnlyAfterRecordingIncome() {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Salary account", WalletType.BANK, "VND", false);
+        Category category = new Category(user, "Salary", CategoryType.INCOME, "banknote", "#0F8F72");
+        CreateTransactionRequest request = new CreateTransactionRequest(
+                walletId, categoryId, TransactionType.INCOME, new BigDecimal("1000000"), "August salary", null,
+                Instant.parse("2026-08-26T09:00:00Z"), true);
+        IncomeAllocationPlan plan = new IncomeAllocationPlan(wallet, List.of(), List.of(), BigDecimal.ZERO);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(allocationRuleService.prepareIncomeAllocation(userId, walletId, request.amount())).thenReturn(plan);
+        when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME)).thenReturn(category);
+
+        service.create(userId, request, "allocated-income-2026-08-26");
+
+        assertThat(wallet.getCurrentBalance()).isEqualByComparingTo("1000000");
+        verify(transactionRepository).save(any(FinancialTransaction.class));
+        verify(ledgerEntryRepository).saveAll(any());
+        verify(allocationRuleService).applyIncomeAllocation(org.mockito.ArgumentMatchers.eq(plan), org.mockito.ArgumentMatchers.any(FinancialTransaction.class));
+        verify(walletService, never()).requireOwnedWalletForTransaction(userId, walletId);
     }
 
     @Test

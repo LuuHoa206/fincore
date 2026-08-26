@@ -46,6 +46,20 @@ public class WalletService {
         return walletRepository.findAllActiveByUserIdForUpdate(userId);
     }
 
+    /**
+     * Keeps wallet ownership and row-locking behind the wallet service boundary.
+     */
+    @Transactional
+    public Wallet requireOwnedWalletForTransaction(UUID userId, UUID walletId) {
+        return walletRepository.findOwnedForUpdate(walletId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WALLET_NOT_FOUND", "Wallet was not found"));
+    }
+
+    @Transactional(readOnly = true)
+    public Wallet requireOwnedActiveWallet(UUID userId, UUID walletId) {
+        return requireOwnedWallet(userId, walletId);
+    }
+
     @Transactional
     public WalletResponse create(UUID userId, CreateWalletRequest request) {
         UserAccount user = userRepository.findById(userId)

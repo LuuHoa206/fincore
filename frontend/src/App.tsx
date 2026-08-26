@@ -5,6 +5,7 @@ import { CategoriesPage } from './features/categories/CategoriesPage'
 import { BudgetsPage } from './features/budgets/BudgetsPage'
 import { SavingGoalsPage } from './features/savinggoals/SavingGoalsPage'
 import { MoneyJarsPage } from './features/moneyjars/MoneyJarsPage'
+import { AllocationRulesPage } from './features/allocationrules/AllocationRulesPage'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { WalletsPage } from './features/wallets/WalletsPage'
@@ -27,6 +28,7 @@ function App() {
             <Route path="budgets" element={<BudgetsPage />} />
             <Route path="goals" element={<SavingGoalsPage />} />
             <Route path="jars" element={<MoneyJarsPage />} />
+            <Route path="allocation-rules" element={<AllocationRulesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
           </Route>
         </Route>

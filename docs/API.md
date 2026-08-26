@@ -222,6 +222,53 @@ unassigned.
 The amount becomes available for another jar. The release is blocked if it
 would make a non-negative jar balance fall below zero.
 
+## Allocation rules
+
+An allocation rule distributes a future income into money jars of the same
+currency. A user can keep multiple drafts, but only one rule per currency may
+be enabled. The percentages may be less than 100; the remainder stays available
+in the wallet.
+
+### List rules
+
+`GET /allocation-rules`
+
+### Create a rule
+
+`POST /allocation-rules`
+
+```json
+{
+  "name": "Monthly salary split",
+  "currency": "VND",
+  "enabled": true,
+  "items": [
+    { "jarId": "<emergency-jar-id>", "percentage": 20 },
+    { "jarId": "<travel-jar-id>", "percentage": 10 }
+  ]
+}
+```
+
+All jars must belong to the current user and use the specified currency. The
+combined percentage cannot exceed 100. Use `PATCH /allocation-rules/{ruleId}`
+to change the name, enabled state, or items, and `DELETE /allocation-rules/{ruleId}`
+to remove a rule.
+
+### Preview an income allocation
+
+`GET /allocation-rules/preview?walletId=<wallet-id>&amount=15000000`
+
+The response shows the enabled rule for that wallet currency, per-jar amounts,
+the total allocated amount, and the amount left unassigned. It does not change
+data.
+
+### Apply a rule when recording income
+
+Include `applyAllocationRule: true` in `POST /transactions` for an `INCOME`.
+The API rejects the request with `409` when there is no enabled rule for the
+wallet currency. The financial transaction, balanced ledger entries, jar
+balances, and `jar_movements` either all commit or all roll back together.
+
 ## Monthly budgets
 
 A budget belongs to one expense category and one calendar month. Its actual
