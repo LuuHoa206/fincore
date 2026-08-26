@@ -232,6 +232,31 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .status-exceeded { color: #b73c4b; background: #fdecec; }
 .budget-card.budget-warning .progress-track i { background: #d99018; }
 .budget-card.budget-exceeded .progress-track i { background: #c85454; }
+.goal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.goal-card { display: grid; overflow: hidden; border: 1px solid var(--line); border-top: 3px solid var(--green-600); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(22, 49, 41, .045); }
+.goal-card.goal-paused { border-top-color: #d99018; }
+.goal-card.goal-completed { border-top-color: #1d7db5; }
+.goal-card > header { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 17px; border-bottom: 1px solid #edf2f0; }
+.goal-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 7px; color: var(--green-700); background: var(--green-100); }
+.goal-icon svg { width: 18px; }
+.goal-card header > div { min-width: 0; display: grid; gap: 4px; }
+.goal-card header strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.goal-card header small, .goal-card dt { color: var(--muted); font-size: 10px; }
+.goal-card header b { padding: 5px 6px; border-radius: 4px; color: var(--green-700); background: #e4f6ef; font-size: 9px; white-space: nowrap; }
+.goal-amount { display: grid; gap: 5px; padding: 18px 17px 12px; }
+.goal-amount small { color: var(--muted); font-size: 10px; }
+.goal-amount strong { font-size: 22px; }
+.goal-amount span { color: var(--muted); font-size: 10px; }
+.goal-progress { display: grid; gap: 8px; padding: 0 17px 16px; color: var(--muted); font-size: 10px; }
+.goal-card.goal-paused .progress-track i { background: #d99018; }
+.goal-card.goal-completed .progress-track i { background: #1d7db5; }
+.goal-card dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 0; padding: 14px 17px; border-top: 1px solid #edf2f0; background: #fbfefd; }
+.goal-card dl div { display: grid; gap: 4px; }
+.goal-card dd { margin: 0; color: var(--ink); font-size: 11px; font-weight: 700; }
+.goal-card footer { display: flex; gap: 8px; padding: 14px 17px; border-top: 1px solid #edf2f0; }
+.goal-card footer .secondary-button { flex: 1; min-height: 36px; font-size: 11px; }
+.goal-card footer .secondary-button svg { width: 14px; }
+.goal-card footer .icon-button { width: 36px; height: 36px; }
 .allocation-modal { width: min(470px, 100%); }
 .allocation-mode { width: 100%; }
 .allocation-mode button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }

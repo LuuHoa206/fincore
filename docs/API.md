@@ -263,6 +263,41 @@ Only `limitAmount` and `warningThreshold` are editable. Archive returns `204 No
 Content`; it preserves historical transactions and allows a new plan to be
 created for the same category and month later.
 
+## Saving goals
+
+A saving goal is attached to one money jar. `currentAmount` is the jar's
+allocated balance, so the client cannot independently edit a second balance.
+
+### List saving goals
+
+`GET /saving-goals`
+
+The response includes progress, remaining amount, and an optional monthly
+contribution suggestion when a target date is provided.
+
+### Create a saving goal
+
+`POST /saving-goals`
+
+```json
+{
+  "jarId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "name": "Emergency fund",
+  "targetAmount": 30000000,
+  "targetDate": "2026-12-31"
+}
+```
+
+An active jar can have at most one open goal. If the jar allocation reaches the
+target, the API reports `COMPLETED` automatically.
+
+### Update or change goal status
+
+`PATCH /saving-goals/{goalId}` updates the name, target amount, or target date.
+
+`POST /saving-goals/{goalId}/status` accepts `ACTIVE`, `PAUSED`, or `CANCELLED`.
+`COMPLETED` is calculated from the linked jar and cannot be manually selected.
+
 ## Transactions
 
 ### List transactions

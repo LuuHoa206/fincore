@@ -143,6 +143,10 @@ public class MoneyJarService {
         return new AllocationContext(jar, walletBalance.subtract(allocatedBalance));
     }
 
+    public MoneyJar requireOwnedActiveJarForSavingGoal(UUID userId, UUID jarId) {
+        return requireOwnedActiveJar(userId, jarId);
+    }
+
     private MoneyJar requireOwnedActiveJar(UUID userId, UUID jarId) {
         return moneyJarRepository.findByIdAndUserIdAndArchivedFalse(jarId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("MONEY_JAR_NOT_FOUND", "Money jar was not found"));
