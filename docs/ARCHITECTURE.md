@@ -17,6 +17,7 @@ Spring Boot
    |-- wallet
    |-- transaction
    |-- moneyjar
+   |-- allocationrule
    |-- budget
    |-- savinggoal
    |-- reporting
@@ -53,7 +54,7 @@ Vi du luong `POST /api/v1/transactions`:
 TransactionController
   -> CreateTransactionRequest DTO
   -> TransactionService.create(...)
-  -> WalletRepository.findOwnedForUpdate(...)
+  -> WalletService.requireOwnedWalletForTransaction(...)
   -> FinancialTransactionRepository.save(...)
   -> LedgerEntryRepository.saveAll(...)
   -> TransactionResponse DTO
@@ -81,6 +82,11 @@ hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
   da gan cho cac hu khong vuot qua so du vi thuc te cung loai tien.
 - Phan bo va giai phong hu chi tao `jar_movements`, khong lam thay doi so du
   vi. Vi vay tong tai san khong bi dem hai lan.
+- Quy tac chia tien thuoc module `allocationrule`, co controller, service va
+  repository rieng. Moi quy tac gan voi mot tien te va co toi da mot quy tac
+  dang bat cho moi nguoi dung/tien te. Khi nguoi dung chu dong bat tuy chon
+  tu chia tren khoan `INCOME`, `TransactionService` khoa vi, khoa hu, khoa quy
+  tac, ghi giao dich va but toan hu trong cung mot database transaction.
 - Ngan sach khong luu tru truong "da chi" de tranh sai lech du lieu. `BudgetService`
   lay tong giao dich `EXPENSE` co trang thai `POSTED` trong dung thang, dung danh
   muc va dung loai tien thong qua `TransactionReportingService`.

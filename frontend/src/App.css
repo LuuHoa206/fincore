@@ -333,6 +333,34 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .check-row > span { display: grid; gap: 4px; }
 .check-row small { color: var(--muted); font-weight: 500; }
 .wallet-form footer, .confirm-modal footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+.allocation-rule-summary { display: grid; grid-template-columns: auto minmax(180px, .7fr) minmax(280px, 1.3fr); align-items: center; gap: 16px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid #bde7d8; border-radius: 8px; color: #235144; background: #f1fbf7; }
+.allocation-rule-summary > span { display: grid; place-items: center; width: 42px; height: 42px; color: var(--green-700); border-radius: 7px; background: #dff7ec; }
+.allocation-rule-summary svg { width: 21px; }
+.allocation-rule-summary small, .allocation-rule-summary strong { display: block; }
+.allocation-rule-summary small { margin-bottom: 4px; color: var(--green-700); font-size: 10px; font-weight: 800; }
+.allocation-rule-summary strong { color: var(--ink); font-size: 15px; }
+.allocation-rule-summary p { margin: 0; color: #55746a; font-size: 12px; line-height: 1.55; }
+.allocation-rule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.allocation-rule-card { min-height: 230px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(22, 49, 41, .045); }
+.allocation-rule-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.allocation-rule-card > header > div:first-child { display: flex; align-items: center; gap: 10px; }
+.allocation-rule-card strong, .allocation-rule-card small { display: block; }
+.allocation-rule-card header small { margin-top: 4px; color: var(--muted); font-size: 11px; }
+.rule-currency { min-width: 44px; padding: 7px 6px; color: var(--green-700); border-radius: 6px; background: #e9faf3; font-size: 11px; font-weight: 800; text-align: center; }
+.rule-total { display: flex; align-items: center; justify-content: space-between; margin: 20px 0 10px; padding: 11px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+.rule-total b { color: var(--green-700); font-size: 17px; }
+.allocation-rule-card ul { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.allocation-rule-card li { display: flex; justify-content: space-between; gap: 12px; color: #4f645d; font-size: 12px; }
+.allocation-rule-card li strong { color: var(--ink); }
+.allocation-rule-modal { width: min(610px, 100%); }
+.rule-item-editor { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 7px; background: #f8fbfa; }
+.rule-item-heading { display: flex; justify-content: space-between; color: #43574f; font-size: 12px; font-weight: 800; }
+.rule-item-heading b { color: var(--green-700); }
+.rule-item-row { display: grid; grid-template-columns: minmax(0, 1fr) 96px 16px 36px; align-items: center; gap: 8px; }
+.rule-item-row select, .rule-item-row input { width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid #ccd9d4; border-radius: 6px; background: #fff; color: var(--ink); outline: 0; }
+.rule-item-row > span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.add-rule-item { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; border: 1px dashed #91d9bd; border-radius: 6px; color: var(--green-700); background: #fff; font-size: 12px; font-weight: 700; }
+.add-rule-item:disabled { color: #9aa8a3; border-color: #d5dfdb; background: #f5f7f6; cursor: not-allowed; }
 .plain-button, .danger-button { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 17px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-weight: 700; }
 .danger-button { color: #fff; border-color: #bf4545; background: #bf4545; }
 .plain-button:disabled, .danger-button:disabled, .primary-button:disabled, .auth-submit:disabled { opacity: .62; cursor: not-allowed; }
@@ -431,6 +459,9 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .wallet-topbar { display: grid; }
   .wallet-topbar .primary-button { width: 100%; }
   .form-row { grid-template-columns: 1fr; }
+  .allocation-rule-summary { grid-template-columns: auto 1fr; }
+  .allocation-rule-summary p { grid-column: 1 / -1; }
+  .rule-item-row { grid-template-columns: minmax(0, 1fr) 86px 14px 34px; }
   .modal { max-height: calc(100vh - 20px); }
   .modal-backdrop { padding: 10px; }
 }

@@ -16,5 +16,6 @@ public record CreateTransactionRequest(
         @NotNull @DecimalMin(value = "0.0001") BigDecimal amount,
         @NotBlank @Size(max = 255) String description,
         @Size(max = 4000) String notes,
-        @NotNull Instant occurredAt) {
+        @NotNull Instant occurredAt,
+        Boolean applyAllocationRule) {
 }

@@ -61,6 +61,12 @@ public class JarMovement {
         return new JarMovement(jar, amount, JarMovementReason.ALLOCATION);
     }
 
+    public static JarMovement allocation(MoneyJar jar, FinancialTransaction transaction, BigDecimal amount) {
+        JarMovement movement = allocation(jar, amount);
+        movement.transaction = transaction;
+        return movement;
+    }
+
     public static JarMovement release(MoneyJar jar, BigDecimal amount) {
         return new JarMovement(jar, amount.negate(), JarMovementReason.RELEASE);
     }

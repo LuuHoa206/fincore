@@ -4,12 +4,14 @@ import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
+import com.luuhoa.fincore.transaction.FinancialTransaction;
 import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
 
@@ -145,6 +147,40 @@ public class MoneyJarService {
 
     public MoneyJar requireOwnedActiveJarForSavingGoal(UUID userId, UUID jarId) {
         return requireOwnedActiveJar(userId, jarId);
+    }
+
+    /**
+     * Locks all active jars in the same order as manual allocation. Other transactional
+     * use cases must use this boundary rather than lock individual jar rows themselves.
+     */
+    @Transactional
+    public List<MoneyJar> lockActiveJarsForAllocation(UUID userId) {
+        return moneyJarRepository.findAllActiveByUserIdForUpdate(userId);
+    }
+
+    /**
+     * Applies an already validated rule plan while the caller holds the ordered wallet and
+     * jar locks. The movement remains linked to its source transaction for auditability.
+     */
+    @Transactional
+    public void applyAutomaticAllocations(
+            List<MoneyJar> lockedJars,
+            FinancialTransaction transaction,
+            List<AutomaticJarAllocation> allocations) {
+        Map<UUID, MoneyJar> jarsById = lockedJars.stream()
+                .collect(java.util.stream.Collectors.toMap(MoneyJar::getId, jar -> jar));
+        List<JarMovement> movements = allocations.stream().map(allocation -> {
+            MoneyJar jar = jarsById.get(allocation.jarId());
+            if (jar == null || !jar.getCurrency().equals(transaction.getCurrency())) {
+                throw new ConflictException("ALLOCATION_JAR_UNAVAILABLE", "An allocation money jar is no longer available");
+            }
+            jar.applyAllocation(allocation.amount());
+            return JarMovement.allocation(jar, transaction, allocation.amount());
+        }).toList();
+        jarMovementRepository.saveAll(movements);
+    }
+
+    public record AutomaticJarAllocation(UUID jarId, BigDecimal amount) {
     }
 
     private MoneyJar requireOwnedActiveJar(UUID userId, UUID jarId) {
