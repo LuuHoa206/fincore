@@ -20,6 +20,7 @@ export function AppLayout() {
         </div>
         <button className="close-nav icon-button" onClick={() => setMobileNavOpen(false)} aria-label="Đóng menu"><X /></button>
         <nav>
+          <NavLink to="/jars" onClick={() => setMobileNavOpen(false)}><CircleDollarSign /> Hũ tiền</NavLink>
           <NavLink to="/" end onClick={() => setMobileNavOpen(false)}><LayoutDashboard /> Tổng quan</NavLink>
           <NavLink to="/wallets" onClick={() => setMobileNavOpen(false)}><WalletCards /> Ví tiền</NavLink>
           <NavLink to="/categories" onClick={() => setMobileNavOpen(false)}><Tag /> Danh mục</NavLink>

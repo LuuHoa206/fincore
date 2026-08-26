@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './features/auth/AuthContext'
 import { LoginPage } from './features/auth/AuthPage'
 import { CategoriesPage } from './features/categories/CategoriesPage'
+import { MoneyJarsPage } from './features/moneyjars/MoneyJarsPage'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { WalletsPage } from './features/wallets/WalletsPage'
@@ -21,6 +22,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="wallets" element={<WalletsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
+            <Route path="jars" element={<MoneyJarsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
           </Route>
         </Route>

@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownLeft, ArrowUpRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
 import { categoryApi } from '../categories/categoryApi'
@@ -117,14 +117,14 @@ function TransactionRow({ transaction, onReverse }: { transaction: Transaction; 
 
 function TransactionFormModal({ wallets, categories, onClose, onSaved }: { wallets: Wallet[]; categories: Category[]; onClose: () => void; onSaved: () => void }) {
   const [submitError, setSubmitError] = useState('')
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
+  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
     defaultValues: { walletId: wallets[0]?.id, categoryId: categories.find((category) => category.categoryType === 'EXPENSE')?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue() },
   })
-  const selectedWalletId = watch('walletId')
+  const selectedWalletId = useWatch({ control, name: 'walletId' })
   const selectedWallet = wallets.find((wallet) => wallet.id === selectedWalletId)
-  const selectedType = watch('transactionType')
-  const selectedCategoryId = watch('categoryId')
+  const selectedType = useWatch({ control, name: 'transactionType' })
+  const selectedCategoryId = useWatch({ control, name: 'categoryId' })
   const availableCategories = categories.filter((category) => category.categoryType === selectedType)
 
   useEffect(() => {

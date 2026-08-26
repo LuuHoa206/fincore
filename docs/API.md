@@ -157,6 +157,71 @@ Names are unique per owner and category type, ignoring letter case.
 Archive returns `204 No Content`. Archived categories cannot be selected for
 new transactions, while existing transaction history remains intact.
 
+## Money jars
+
+Money jars are envelopes for a purpose such as emergency savings or travel.
+They allocate already-owned wallet balance without changing the wallet balance
+itself. All allocation limits are checked server-side in a database transaction.
+
+### List money jars
+
+`GET /jars`
+
+Only active jars owned by the authenticated user are returned.
+
+### Create a money jar
+
+`POST /jars`
+
+```json
+{
+  "name": "Emergency fund",
+  "currency": "VND",
+  "spendingLimit": 5000000,
+  "color": "#0F8F72",
+  "icon": "shield-check",
+  "allowNegative": false
+}
+```
+
+The name is unique for each user. The jar starts with an allocated balance of
+zero; the amount cannot be sent in the create request.
+
+### Update or archive a money jar
+
+`PATCH /jars/{jarId}` and `DELETE /jars/{jarId}`
+
+A jar must be released to zero before it can be archived. Currency and
+allocated balance are immutable through the edit endpoint.
+
+### Allocate money to a jar
+
+`POST /jars/{jarId}/allocate`
+
+```json
+{
+  "amount": 500000
+}
+```
+
+The API locks the user's active wallets and jars before it calculates the
+remaining allocatable balance for that currency. It returns `409` if the
+request would allocate more than the real wallet balance that remains
+unassigned.
+
+### Release money from a jar
+
+`POST /jars/{jarId}/release`
+
+```json
+{
+  "amount": 200000
+}
+```
+
+The amount becomes available for another jar. The release is blocked if it
+would make a non-negative jar balance fall below zero.
+
 ## Transactions
 
 ### List transactions

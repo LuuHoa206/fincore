@@ -1,2 +1,4 @@
-/** Virtual money allocation jars and automatic allocation rules. */
+/**
+ * Envelope-style money jars and the audited allocation movements that belong to them.
+ */
 package com.luuhoa.fincore.moneyjar;
