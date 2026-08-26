@@ -29,7 +29,7 @@ PostgreSQL
 ## Quy uoc 3 lop MVC
 
 Ma nguon duoc to chuc **theo module nghiep vu**, nhung moi module bat buoc tuan
-thu 3 lop. Vi du trong `wallet` va `transaction`:
+thu 3 lop. Vi du trong `wallet`, `moneyjar` va `transaction`:
 
 ```text
 HTTP request
@@ -70,6 +70,11 @@ phu thuoc vao service, khong duoc inject repository.
 - Giao dich da ghi nhan khong bi xoa; hoan tac tao giao dich doi ung de giu lich su doi soat.
 - API nhan `Idempotency-Key` de mot lan gui lai cung request khong ghi nhan lai giao dich.
 - DTO API khong tra entity JPA, giup tranh lo ro du lieu noi bo va lazy-loading khong kiem soat.
+- Hu tien la phan bo theo muc dich, khong phai mot vi tien rieng. Khi phan bo,
+  `MoneyJarService` lock danh sach vi va hu cua nguoi dung, dam bao tong tien
+  da gan cho cac hu khong vuot qua so du vi thuc te cung loai tien.
+- Phan bo va giai phong hu chi tao `jar_movements`, khong lam thay doi so du
+  vi. Vi vay tong tai san khong bi dem hai lan.
 
 ## Quy tac lien module
 

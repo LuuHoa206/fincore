@@ -38,6 +38,14 @@ public class WalletService {
         return WalletResponse.from(requireOwnedWallet(userId, walletId));
     }
 
+    /**
+     * Internal service boundary for use cases that need a consistent allocation snapshot.
+     */
+    @Transactional
+    public List<Wallet> lockActiveWalletsForAllocation(UUID userId) {
+        return walletRepository.findAllActiveByUserIdForUpdate(userId);
+    }
+
     @Transactional
     public WalletResponse create(UUID userId, CreateWalletRequest request) {
         UserAccount user = userRepository.findById(userId)
