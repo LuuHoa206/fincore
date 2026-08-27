@@ -17,6 +17,17 @@
 5. Build, test, migration và API contract phải được kiểm tra trước merge.
 6. Chỉ merge `dev` vào `main` khi milestone đã được demo và xác nhận.
 
+## Kiểm tra tự động
+
+GitHub Actions chạy khi có pull request hoặc push vào `dev` và `main`:
+
+- Backend: Java 21 và `./mvnw test`.
+- Frontend: Node.js 24, `npm ci`, `npm run lint` và `npm run build`.
+
+Workflow chỉ dùng quyền đọc repository, tự hủy lượt chạy cũ của cùng nhánh và
+giới hạn 15 phút cho mỗi job. Integration test PostgreSQL/Flyway vẫn nên chạy
+trước merge khi máy có Docker Desktop theo hướng dẫn trong `README.md`.
+
 ## Commit convention
 
 ```text
