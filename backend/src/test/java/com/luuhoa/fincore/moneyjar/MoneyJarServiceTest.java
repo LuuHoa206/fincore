@@ -15,6 +15,7 @@ import java.util.UUID;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
+import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
 import com.luuhoa.fincore.wallet.WalletType;
@@ -110,6 +111,24 @@ class MoneyJarServiceTest {
 
         verify(jarMovementRepository, never()).save(any());
         assertThat(jar.getAllocatedBalance()).isEqualByComparingTo("50000");
+    }
+
+    @Test
+    void refusesAllocationIntoAJarOutsideTheCurrentUsersScope() {
+        UUID userId = UUID.randomUUID();
+        UUID foreignJarId = UUID.randomUUID();
+
+        when(walletService.lockActiveWalletsForAllocation(userId)).thenReturn(List.of());
+        when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.allocate(
+                userId,
+                foreignJarId,
+                new ChangeJarAllocationRequest(new BigDecimal("1"))))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Money jar was not found");
+
+        verify(jarMovementRepository, never()).save(any());
     }
 
     private MoneyJar jar(UUID jarId, String name, String currency) {

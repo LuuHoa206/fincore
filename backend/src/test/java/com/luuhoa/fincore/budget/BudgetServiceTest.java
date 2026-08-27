@@ -24,6 +24,7 @@ import com.luuhoa.fincore.category.CategoryType;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
+import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.transaction.TransactionReportingService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -125,6 +126,20 @@ class BudgetServiceTest {
         assertThatThrownBy(() -> service.create(UUID.randomUUID(), request))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("first day");
+    }
+
+    @Test
+    void refusesToArchiveABudgetOutsideTheCurrentUsersScope() {
+        UUID userId = UUID.randomUUID();
+        UUID foreignBudgetId = UUID.randomUUID();
+        when(budgetRepository.findByIdAndUserIdAndArchivedFalse(foreignBudgetId, userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.archive(userId, foreignBudgetId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Budget was not found");
+
+        verify(budgetRepository, never()).findById(foreignBudgetId);
     }
 
     private UserAccount user() {
