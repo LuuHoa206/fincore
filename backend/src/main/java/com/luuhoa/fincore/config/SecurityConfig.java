@@ -1,7 +1,10 @@
 package com.luuhoa.fincore.config;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Arrays;
+
+import com.luuhoa.fincore.identity.AuthenticationRateLimiter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -69,6 +72,13 @@ public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    AuthenticationRateLimiter authenticationRateLimiter(
+            @Value("${app.security.auth-rate-limit.max-attempts:10}") int maximumAttempts,
+            @Value("${app.security.auth-rate-limit.window:PT1M}") Duration window) {
+        return new AuthenticationRateLimiter(maximumAttempts, window);
     }
 
     @Bean
