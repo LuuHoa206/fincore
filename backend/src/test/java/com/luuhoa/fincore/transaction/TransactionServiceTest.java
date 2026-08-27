@@ -61,7 +61,7 @@ class TransactionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletService, userRepository, categoryService, allocationRuleService);
+        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletService, userRepository, categoryService, allocationRuleService, List.of());
     }
 
     @SuppressWarnings("unchecked")

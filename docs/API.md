@@ -464,6 +464,76 @@ scheduled timestamp. Concurrent scheduler runs or a retry therefore cannot post
 the same occurrence twice. After recording, the next run advances to the first
 future period; missed periods are not bulk-posted after downtime.
 
+## Split bills and reimbursements
+
+A split bill records one real expense first, then tracks only the money that
+other people need to reimburse. It never creates a second artificial balance.
+Each reimbursement is posted as a real `INCOME` transaction into the selected
+wallet, in the same database transaction that updates the receivable status.
+
+### List or view split bills
+
+`GET /split-bills` and `GET /split-bills/{billId}`
+
+Responses include the original expense transaction, the payer's own share,
+each participant's balance, payment history, and calculated status:
+`OPEN`, `PARTIALLY_SETTLED`, or `SETTLED`.
+
+### Create a split bill
+
+`POST /split-bills`
+
+```http
+Idempotency-Key: split-bill-2026-08-27-01
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "expenseCategoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "name": "Dinner with the project team",
+  "totalAmount": 900000,
+  "payerShareAmount": 300000,
+  "description": "Paid dinner for the team",
+  "occurredAt": "2026-08-27T12:00:00Z",
+  "participants": [
+    { "name": "An", "owedAmount": 300000 },
+    { "name": "Binh", "contact": "binh@example.com", "owedAmount": 300000 }
+  ]
+}
+```
+
+The payer share plus all participant shares must equal `totalAmount`. The API
+posts exactly one `EXPENSE` transaction and uses its ID as the immutable link
+to the split bill. `Idempotency-Key` is mandatory for this endpoint, so a
+network retry returns the original split bill instead of charging the wallet
+twice.
+
+### Record a reimbursement
+
+`POST /split-bills/{billId}/participants/{participantId}/payments`
+
+```http
+Idempotency-Key: split-payment-2026-08-27-01
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "incomeCategoryId": "35cde5bf-5e55-4ce2-9c14-e6d7ad6b9cf0",
+  "amount": 100000,
+  "notes": "Bank transfer received",
+  "occurredAt": "2026-08-27T13:00:00Z"
+}
+```
+
+The service locks the split bill before checking the outstanding balance. A
+payment cannot exceed the participant's remaining amount. It creates one real
+`INCOME` transaction, persists the payment link, and recalculates participant
+and bill status atomically. Direct reversal is blocked for an active split-bill
+expense or linked reimbursement, preventing the ledger and receivable state
+from diverging.
+
 ## Dashboard report
 
 ### Get a financial dashboard

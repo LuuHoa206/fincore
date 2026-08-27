@@ -36,6 +36,7 @@ public class TransactionService {
     private final UserAccountRepository userRepository;
     private final CategoryService categoryService;
     private final AllocationRuleService allocationRuleService;
+    private final List<TransactionReversalGuard> transactionReversalGuards;
 
     public TransactionService(
             FinancialTransactionRepository transactionRepository,
@@ -43,13 +44,15 @@ public class TransactionService {
             WalletService walletService,
             UserAccountRepository userRepository,
             CategoryService categoryService,
-            AllocationRuleService allocationRuleService) {
+            AllocationRuleService allocationRuleService,
+            List<TransactionReversalGuard> transactionReversalGuards) {
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.walletService = walletService;
         this.userRepository = userRepository;
         this.categoryService = categoryService;
         this.allocationRuleService = allocationRuleService;
+        this.transactionReversalGuards = List.copyOf(transactionReversalGuards);
     }
 
     @Transactional(readOnly = true)
@@ -195,6 +198,7 @@ public class TransactionService {
     public TransactionResponse reverse(UUID userId, UUID transactionId) {
         FinancialTransaction original = transactionRepository.findOwnedForUpdate(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_NOT_FOUND", "Transaction was not found"));
+        transactionReversalGuards.forEach(guard -> guard.assertCanReverse(userId, transactionId));
         if (original.getStatus() != TransactionStatus.POSTED || original.getTransactionType() == TransactionType.REVERSAL
                 || transactionRepository.existsByReversedTransactionId(transactionId)) {
             throw new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "This transaction has already been reversed or cannot be reversed");
