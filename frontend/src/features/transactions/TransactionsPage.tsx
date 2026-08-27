@@ -49,18 +49,27 @@ export function TransactionsPage() {
   const [reverseTarget, setReverseTarget] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState<Filter>('ALL')
   const [query, setQuery] = useState('')
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
   const [page, setPage] = useState(0)
   const [actionError, setActionError] = useState('')
+  const hasInvalidDateRange = Boolean(fromDate && toDate && fromDate > toDate)
+  const transactionFilters = {
+    transactionType: filter === 'ALL' ? undefined : filter,
+    query: query.trim() || undefined,
+    from: toStartOfLocalDay(fromDate),
+    to: toStartOfFollowingLocalDay(toDate),
+  }
   const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: () => categoryApi.list() })
   const transactionsQuery = useQuery({
-    queryKey: ['transactions', filter, query.trim(), page],
+    queryKey: ['transactions', filter, query.trim(), fromDate, toDate, page],
     queryFn: () => transactionApi.list({
-      transactionType: filter === 'ALL' ? undefined : filter,
-      query: query.trim() || undefined,
+      ...transactionFilters,
       page,
       size: 10,
     }),
+    enabled: !hasInvalidDateRange,
   })
   const reverseMutation = useMutation({
     mutationFn: transactionApi.reverse,
@@ -72,10 +81,7 @@ export function TransactionsPage() {
     onError: (error) => setActionError(getApiErrorMessage(error, 'Không thể hoàn tác giao dịch.')),
   })
   const exportMutation = useMutation({
-    mutationFn: () => transactionApi.exportCsv({
-      transactionType: filter === 'ALL' ? undefined : filter,
-      query: query.trim() || undefined,
-    }),
+    mutationFn: () => transactionApi.exportCsv(transactionFilters),
     onSuccess: ({ blob, fileName }) => {
       const objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -100,7 +106,7 @@ export function TransactionsPage() {
     <header className="topbar transaction-topbar">
       <div><p className="eyebrow">DÒNG TIỀN HẰNG NGÀY</p><h1>Giao dịch</h1><p className="page-subtitle">Ghi nhận thu nhập và chi tiêu theo từng ví. Số dư được cập nhật ngay sau khi giao dịch được tạo.</p></div>
       <div className="transaction-actions">
-        <button className="secondary-button" disabled={!totalTransactions || exportMutation.isPending} onClick={() => exportMutation.mutate()} title="Xuất toàn bộ giao dịch theo bộ lọc hiện tại, không chỉ trang đang xem"><Download /> {exportMutation.isPending ? 'Đang xuất...' : 'Xuất CSV'}</button>
+        <button className="secondary-button" disabled={!totalTransactions || hasInvalidDateRange || exportMutation.isPending} onClick={() => exportMutation.mutate()} title="Xuất toàn bộ giao dịch theo bộ lọc hiện tại, không chỉ trang đang xem"><Download /> {exportMutation.isPending ? 'Đang xuất...' : 'Xuất CSV'}</button>
         <button className="secondary-button" disabled={!canTransfer} onClick={() => setTransferFormOpen(true)} title={canTransfer ? 'Chuyển tiền giữa hai ví cùng loại tiền tệ' : 'Cần ít nhất hai ví cùng tiền tệ'}><ArrowLeftRight /> Chuyển tiền</button>
         <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
       </div>
@@ -115,6 +121,11 @@ export function TransactionsPage() {
     {canDisplayWorkspace && <section className="panel transactions-workspace">
       <div className="transaction-tools">
         <label className="transaction-search"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="Tìm theo nội dung, danh mục hoặc ghi chú" /></label>
+        <div className="transaction-filter-controls" aria-label="Lọc theo ngày">
+          <label className="transaction-date-filter"><span>Từ ngày</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => { setFromDate(event.target.value); setPage(0) }} /></label>
+          <label className="transaction-date-filter"><span>Đến ngày</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => { setToDate(event.target.value); setPage(0) }} /></label>
+          <button className="icon-button date-filter-clear" type="button" disabled={!fromDate && !toDate} onClick={() => { setFromDate(''); setToDate(''); setPage(0) }} aria-label="Xóa lọc ngày" title="Xóa lọc ngày"><X /></button>
+        </div>
         <div className="segmented-control" aria-label="Lọc loại giao dịch">
           {([{ value: 'ALL', label: 'Tất cả' }, { value: 'INCOME', label: 'Thu' }, { value: 'EXPENSE', label: 'Chi' }, { value: 'TRANSFER', label: 'Chuyển tiền' }] as const).map((item) =>
             <button key={item.value} className={filter === item.value ? 'selected' : ''} onClick={() => { setFilter(item.value); setPage(0) }}>{item.label}</button>,
@@ -122,12 +133,15 @@ export function TransactionsPage() {
         </div>
       </div>
 
+      {hasInvalidDateRange && <div className="form-alert transaction-filter-alert" role="alert">Ngày bắt đầu không thể sau ngày kết thúc.</div>}
+      {!hasInvalidDateRange && <>
       {transactionsQuery.isPending && <div className="content-state compact-state"><LoaderCircle className="spin" /><span>Đang tải giao dịch</span></div>}
       {transactionsQuery.isError && <div className="content-state compact-state error-state"><CircleAlert /><strong>Chưa thể tải giao dịch</strong><p>{getApiErrorMessage(transactionsQuery.error, 'Vui lòng thử lại.')}</p><button className="secondary-button" onClick={() => void transactionsQuery.refetch()}>Thử lại</button></div>}
-      {!transactionsQuery.isPending && !transactionsQuery.isError && visibleTransactions.length === 0 && <div className="content-state compact-state"><FileText /><strong>Chưa có giao dịch phù hợp</strong><p>{query || filter !== 'ALL' ? 'Thử thay đổi điều kiện tìm kiếm hoặc bộ lọc.' : 'Bắt đầu bằng khoản thu hoặc chi đầu tiên của bạn.'}</p></div>}
+      {!transactionsQuery.isPending && !transactionsQuery.isError && visibleTransactions.length === 0 && <div className="content-state compact-state"><FileText /><strong>Chưa có giao dịch phù hợp</strong><p>{query || filter !== 'ALL' || fromDate || toDate ? 'Thử thay đổi điều kiện tìm kiếm hoặc bộ lọc.' : 'Bắt đầu bằng khoản thu hoặc chi đầu tiên của bạn.'}</p></div>}
       {!!visibleTransactions.length && <><div className="transaction-table-wrap"><table className="transaction-table"><thead><tr><th>Giao dịch</th><th>Danh mục</th><th>Ví tiền</th><th>Thời gian</th><th>Trạng thái</th><th className="numeric-cell">Số tiền</th><th aria-label="Thao tác" /></tr></thead><tbody>
         {visibleTransactions.map((transaction) => <TransactionRow key={transaction.id} transaction={transaction} onReverse={() => setReverseTarget(transaction)} />)}
       </tbody></table></div><TransactionPagination page={transactionsQuery.data?.page ?? 0} totalPages={transactionsQuery.data?.totalPages ?? 0} totalElements={totalTransactions} onChange={setPage} /></>}
+      </>}
     </section>}
 
     {formOpen && walletsQuery.data && categoriesQuery.data && <TransactionFormModal wallets={walletsQuery.data} categories={categoriesQuery.data} onClose={() => setFormOpen(false)} onSaved={() => {
@@ -290,4 +304,15 @@ function localDateTimeValue() {
   const now = new Date()
   const offset = now.getTimezoneOffset() * 60_000
   return new Date(now.getTime() - offset).toISOString().slice(0, 16)
+}
+
+function toStartOfLocalDay(value: string) {
+  return value ? new Date(`${value}T00:00:00`).toISOString() : undefined
+}
+
+function toStartOfFollowingLocalDay(value: string) {
+  if (!value) return undefined
+  const date = new Date(`${value}T00:00:00`)
+  date.setDate(date.getDate() + 1)
+  return date.toISOString()
 }
