@@ -37,6 +37,21 @@ financial descriptions, or account values. Disable these logs temporarily with
 `REQUEST_LOGGING_ENABLED=false`; keep correlation IDs enabled for support and
 incident investigation.
 
+## Authentication rate limiting
+
+`POST /api/v1/auth/register`, `/login` and `/refresh` are limited by source IP
+and endpoint. The default is 10 attempts in one minute. When the limit is
+reached, the backend returns `429`, `AUTH_RATE_LIMITED` and `Retry-After`; it
+does not record the email address, IP address, token or request body in logs.
+
+The limiter is intentionally in-memory and therefore applies per application
+instance. It is suitable as a basic guard for local and single-instance
+deployments. Before deploying multiple backend instances, move this control to
+an API gateway or a shared Redis-backed limiter. Configure it with
+`AUTH_RATE_LIMIT_MAX_ATTEMPTS` and `AUTH_RATE_LIMIT_WINDOW` (for example
+`PT1M`). The filter uses the direct peer address rather than a client supplied
+forwarded header so an arbitrary caller cannot spoof its identity.
+
 ## First response checklist
 
 1. Ask for the `X-Correlation-Id`, approximate request time, API path and user-visible error.

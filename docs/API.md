@@ -14,6 +14,12 @@ default. The durations are configurable through environment variables.
 
 ## Authentication
 
+Public authentication endpoints are protected by a per-instance rate limit.
+`POST /auth/register`, `POST /auth/login` and `POST /auth/refresh` allow 10
+attempts per source IP and endpoint each minute by default. A rejected request
+returns `429 Too Many Requests`, the `AUTH_RATE_LIMITED` error code and a
+`Retry-After` header.
+
 ### Register
 
 `POST /auth/register`
