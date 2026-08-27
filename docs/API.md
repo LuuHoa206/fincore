@@ -563,6 +563,19 @@ counts, budget alerts, open saving goals, and the five most recent transactions.
 Totals from different currencies are returned separately rather than converted
 with an unverified exchange rate.
 
+### Get transparent monthly insights
+
+`GET /reports/dashboard/insights?period=2026-08`
+
+The optional `period` follows the same `YYYY-MM` rule as the dashboard. The
+response ranks concise observations derived from the already-recorded cash flow,
+budget status, and saving-goal progress. It is read-only and explainable: it
+never changes a transaction, budget, wallet, or goal, and it does not claim to
+predict future financial outcomes.
+
+Each insight contains a stable `key`, `severity` (`INFO`, `SUCCESS`, `WARNING`,
+or `DANGER`), title, message, and the related currency/amount when applicable.
+
 ## Error format
 
 Validation and business errors share one response shape:

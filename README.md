@@ -120,3 +120,8 @@ The first AI-assist baseline recommends up to three visible transaction
 categories from the description and explains the matching signals. It is a
 deterministic, reviewable rule layer; users always select the category and the
 assistant never writes financial data on its own.
+
+The dashboard also provides transparent monthly observations from posted cash
+flow, budget status, and saving-goal progress. These observations are read-only
+and explainable; they help users review recorded data rather than predict or
+alter financial outcomes.

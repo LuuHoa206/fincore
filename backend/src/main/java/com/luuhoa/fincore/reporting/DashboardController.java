@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final FinancialInsightService financialInsightService;
 
-    public DashboardController(DashboardService dashboardService) {
+    public DashboardController(DashboardService dashboardService, FinancialInsightService financialInsightService) {
         this.dashboardService = dashboardService;
+        this.financialInsightService = financialInsightService;
     }
 
     @GetMapping
@@ -24,5 +26,12 @@ public class DashboardController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) String period) {
         return dashboardService.getDashboard(UUID.fromString(jwt.getSubject()), period);
+    }
+
+    @GetMapping("/insights")
+    MonthlyFinancialInsightsResponse getMonthlyInsights(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) String period) {
+        return financialInsightService.summarize(UUID.fromString(jwt.getSubject()), period);
     }
 }

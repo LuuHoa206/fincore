@@ -71,6 +71,12 @@ service cua wallet, money jar, budget, saving goal va transaction. Cac tong thu
 chi theo tien te duoc truy van boi `TransactionReportingService`; React chi
 hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
 
+Luong `GET /api/v1/reports/dashboard/insights` cung chi doc. Controller chuyen
+nguoi dung va ky bao cao cho `FinancialInsightService`; service nay dung
+`DashboardService`, `BudgetService` va `SavingGoalService` de tao cac nhan xet
+giai thich duoc tu du lieu da ghi nhan. No khong tu dong sua giao dich, ngan
+sach hay muc tieu, va khong tu nhan la du bao tai chinh.
+
 ## Quy tac du lieu va transaction
 
 - Tat ca thay doi so du vi duoc thuc hien trong `@Transactional` service.

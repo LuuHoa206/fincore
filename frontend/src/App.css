@@ -133,6 +133,19 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .dashboard-empty > svg { width: 24px; color: #9cb9ae; }
 .dashboard-empty span { font-size: 12px; font-weight: 700; }
 .dashboard-empty a { color: var(--green-700); font-size: 11px; font-weight: 700; }
+.insights-panel { grid-column: 1 / -1; }
+.insights-heading-icon { width: 22px; color: #bd7b0b; }
+.insights-caption { margin: 16px 0 13px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.insight-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.insight-item { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 13px; border: 1px solid #e5eeea; border-radius: 7px; background: #fbfefd; }
+.insight-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 7px; }
+.insight-icon svg { width: 17px; }
+.insight-item strong { display: block; color: var(--ink); font-size: 12px; line-height: 1.35; }
+.insight-item p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.insight-item.is-success .insight-icon { color: #0b8066; background: #e1f6ef; }
+.insight-item.is-info .insight-icon { color: #3c6e9f; background: #e8f2fb; }
+.insight-item.is-warning .insight-icon { color: #a76a05; background: #fff3d9; }
+.insight-item.is-danger .insight-icon { color: #c85454; background: #fdecec; }
 
 .logout-link {
   width: 100%; border: 0; color: #dcebe6; background: transparent; text-align: left;
@@ -499,6 +512,8 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
   .transactions-panel { grid-column: auto; }
+  .insights-panel { grid-column: auto; }
+  .insight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wallet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .jar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -520,6 +535,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .summary-grid article { min-height: 132px; }
   .metric-card { align-items: center; }
   .panel { padding: 18px; }
+  .insight-list { grid-template-columns: 1fr; }
   .budget-content { align-items: flex-start; }
   .budget-ring { width: 110px; height: 110px; }
   .budget-ring::before { width: 80px; height: 80px; }
