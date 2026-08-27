@@ -6,6 +6,9 @@ type ApiErrorBody = {
 }
 
 export function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
   if (!axios.isAxiosError<ApiErrorBody>(error)) {
     return fallback
   }
