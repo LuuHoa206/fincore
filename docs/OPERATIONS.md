@@ -74,6 +74,14 @@ npm run build
 When Docker Desktop is available, also execute the PostgreSQL/Flyway integration
 suite documented in the root README.
 
+## Read-only performance baseline
+
+Before changing infrastructure sizing or promoting a release, run the
+repeatable k6 read journey with a dedicated staging account. It authenticates
+once and reads the current profile, dashboard, and transaction history without
+creating or modifying financial data. The script, execution commands, and p95
+guardrails are documented in [Performance testing](PERFORMANCE_TESTING.md).
+
 ## Production Docker handover
 
 The repository contains `docker-compose.production.yml` for a small,
