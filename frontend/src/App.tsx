@@ -18,6 +18,7 @@ const AllocationRulesPage = lazy(async () => ({ default: (await import('./featur
 const TransactionsPage = lazy(async () => ({ default: (await import('./features/transactions/TransactionsPage')).TransactionsPage }))
 const RecurringRulesPage = lazy(async () => ({ default: (await import('./features/recurring/RecurringRulesPage')).RecurringRulesPage }))
 const SplitBillsPage = lazy(async () => ({ default: (await import('./features/splitbills/SplitBillsPage')).SplitBillsPage }))
+const SettingsPage = lazy(async () => ({ default: (await import('./features/auth/SettingsPage')).SettingsPage }))
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
               <Route path="transactions" element={<TransactionsPage />} />
               <Route path="recurring" element={<RecurringRulesPage />} />
               <Route path="split-bills" element={<SplitBillsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login: async (input) => applySession(await authApi.login(input)),
     register: async (input) => applySession(await authApi.register(input)),
+    updateProfile: async (input) => setUser(await authApi.updateProfile(input)),
     logout: async () => {
       const refreshToken = tokenStore.getRefreshToken()
       tokenStore.clear()

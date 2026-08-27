@@ -75,6 +75,22 @@ Use the same request body as refresh. The operation is idempotent and returns
 
 Returns the profile that belongs to the access-token subject.
 
+### Update profile
+
+`PUT /users/me`
+
+Updates the authenticated user's display name, default currency for new forms,
+and IANA time zone. It does not convert balances, wallets, or transactions that
+already exist.
+
+```json
+{
+  "displayName": "Luu Hoa",
+  "preferredCurrency": "VND",
+  "timeZone": "Asia/Ho_Chi_Minh"
+}
+```
+
 ## Wallets
 
 Wallet IDs never determine access by themselves. Every query is scoped by both

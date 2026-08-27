@@ -139,6 +139,10 @@ income/expense recording backed by balanced ledger entries and idempotency keys.
 The dashboard is server-composed from these modules and transaction history is
 filtered and paginated by the API instead of a client-side sample.
 
+Users can update their display name, default currency for new forms, and IANA
+time zone from the application. The setting affects future form defaults and
+date presentation only; it never converts or rewrites recorded money.
+
 Backend modules follow a documented three-layer MVC convention: controllers
 handle HTTP and DTO validation, services own business rules and transactions,
 and repositories isolate data access. See [Architecture](docs/ARCHITECTURE.md).
