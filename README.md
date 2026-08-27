@@ -29,6 +29,8 @@ fincore/
 |-- frontend/             React web application
 |-- docs/                 Product and engineering decisions
 |-- docker-compose.yml    Local PostgreSQL environment
+|-- docker-compose.production.yml
+|                         Full production stack: PostgreSQL, API, Nginx web gateway
 `-- .env.example          Environment variable template
 ```
 
@@ -61,6 +63,34 @@ npm run dev
 
 The frontend runs at `http://localhost:5173`; the backend runs at
 `http://localhost:8080`.
+
+## Production deployment with Docker
+
+The production Compose file starts PostgreSQL, the private Spring Boot API, and
+the React application behind Nginx. Only the web gateway publishes a host port;
+the database and API remain inside the Docker network. Nginx serves the SPA,
+falls back to `index.html` for client routes, and proxies `/api/v1` to the API.
+
+On the deployment host:
+
+```sh
+cp .env.production.example .env.production
+# Edit .env.production and replace every placeholder, especially passwords and JWT_SECRET.
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+curl -fsS http://localhost:8080/healthz
+curl -fsS http://localhost:8080/api/v1/actuator/health/readiness
+```
+
+The two `curl` commands assume the default `APP_PORT=8080`; replace the port if
+you choose a different host port.
+
+For a public deployment, put a TLS-capable reverse proxy or managed load
+balancer in front of the web gateway, point it to `APP_PORT`, and set
+`CORS_ALLOWED_ORIGINS` to the exact public `https://` origin. Do not publish the
+PostgreSQL or backend service ports, commit `.env.production`, or reuse the
+local JWT secret in production. `VITE_API_BASE_URL` is a build-time setting and
+defaults to the same-origin `/api/v1` proxy path.
 
 ## Verification
 
