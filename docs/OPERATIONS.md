@@ -73,3 +73,54 @@ npm run build
 
 When Docker Desktop is available, also execute the PostgreSQL/Flyway integration
 suite documented in the root README.
+
+## Production Docker handover
+
+The repository contains `docker-compose.production.yml` for a small,
+single-host production deployment:
+
+- `postgres` stores data in the named `fincore-postgres-data` volume and is not
+  published to the host network;
+- `backend` runs the Spring Boot API with the `production` profile and is only
+  reachable by the Nginx web service;
+- `web` publishes `APP_PORT`, serves the React SPA, redirects client-side routes
+  to `index.html`, and proxies `/api/*` to the private backend.
+
+### Deploy or update
+
+1. Fetch a reviewed commit on the deployment host.
+2. Copy `.env.production.example` to `.env.production`. Keep the real file on
+   the host only and use a unique PostgreSQL password and JWT secret of at least
+   32 random bytes.
+3. Set `CORS_ALLOWED_ORIGINS` to the exact public HTTPS URL, without a trailing
+   slash. Keep `VITE_API_BASE_URL=/api/v1` unless the web application is hosted
+   separately.
+4. Start or update the stack:
+
+```sh
+docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 backend
+```
+
+5. Confirm `http://localhost:<APP_PORT>/healthz` and
+   `http://localhost:<APP_PORT>/api/v1/actuator/health/readiness` return success
+   before exposing the new version through the public proxy.
+
+Terminate TLS at a managed load balancer or reverse proxy in front of the `web`
+service. Do not expose port 5432 or backend port 8080 directly to the Internet.
+
+### Database backup and rollback
+
+Back up the database before applying a new version or Flyway migration:
+
+```sh
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T postgres \
+  sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "fincore-$(date +%F-%H%M).sql"
+```
+
+If an application update fails after deployment, return the code checkout to
+the previous known-good commit and rerun `docker compose ... up -d --build`.
+Never restore a database backup merely to roll back application code; restore
+only after confirming the migration and data recovery plan, because financial
+transactions must remain auditable.

@@ -5,6 +5,7 @@
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar
