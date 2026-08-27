@@ -337,6 +337,15 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .check-row > span { display: grid; gap: 4px; }
 .check-row small { color: var(--muted); font-weight: 500; }
 .wallet-form footer, .confirm-modal footer { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+.category-suggestions { display: grid; gap: 9px; padding: 13px; border: 1px solid #cde8dd; border-radius: 7px; background: #f3fbf7; }
+.category-suggestions > div:first-child { display: grid; gap: 3px; }
+.category-suggestions > div:first-child strong { color: var(--green-700); font-size: 12px; }
+.category-suggestions > div:first-child small { color: #67877c; font-size: 10px; }
+.category-suggestion-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.category-suggestion-list button { display: grid; gap: 3px; min-width: 130px; padding: 9px 11px; border: 1px solid #b8dfd2; border-radius: 6px; color: #3f5e53; background: #fff; text-align: left; }
+.category-suggestion-list button:hover, .category-suggestion-list button.selected { border-color: var(--green-600); background: #e6f8f1; }
+.category-suggestion-list strong { color: var(--ink); font-size: 11px; }
+.category-suggestion-list small { color: #67877c; font-size: 9px; line-height: 1.35; }
 .allocation-rule-summary { display: grid; grid-template-columns: auto minmax(180px, .7fr) minmax(280px, 1.3fr); align-items: center; gap: 16px; margin-bottom: 18px; padding: 18px 20px; border: 1px solid #bde7d8; border-radius: 8px; color: #235144; background: #f1fbf7; }
 .allocation-rule-summary > span { display: grid; place-items: center; width: 42px; height: 42px; color: var(--green-700); border-radius: 7px; background: #dff7ec; }
 .allocation-rule-summary svg { width: 21px; }

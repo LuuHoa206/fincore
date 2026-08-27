@@ -115,3 +115,8 @@ and repositories isolate data access. See [Architecture](docs/ARCHITECTURE.md).
 The observability foundation now provides health/readiness probes, authenticated
 metrics and correlation IDs on every HTTP response. See the
 [Operations guide](docs/OPERATIONS.md) for safe monitoring and incident response.
+
+The first AI-assist baseline recommends up to three visible transaction
+categories from the description and explains the matching signals. It is a
+deterministic, reviewable rule layer; users always select the category and the
+assistant never writes financial data on its own.
