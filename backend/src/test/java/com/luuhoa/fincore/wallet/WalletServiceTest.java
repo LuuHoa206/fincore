@@ -75,6 +75,28 @@ class WalletServiceTest {
     }
 
     @Test
+    void refusesToChangeOrArchiveAWalletOutsideTheCurrentUsersScope() {
+        UUID userId = UUID.randomUUID();
+        UUID foreignWalletId = UUID.randomUUID();
+        when(walletRepository.findByIdAndUserIdAndArchivedFalse(foreignWalletId, userId))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.update(
+                userId,
+                foreignWalletId,
+                new UpdateWalletRequest("Renamed wallet", null, null)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Wallet was not found");
+
+        assertThatThrownBy(() -> service.archive(userId, foreignWalletId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Wallet was not found");
+
+        verify(walletRepository, never()).findById(foreignWalletId);
+        verify(walletRepository, never()).flush();
+    }
+
+    @Test
     void locksAndReturnsTheRequestedWalletsForAnInternalTransfer() throws Exception {
         UUID userId = UUID.randomUUID();
         UUID sourceId = UUID.randomUUID();
