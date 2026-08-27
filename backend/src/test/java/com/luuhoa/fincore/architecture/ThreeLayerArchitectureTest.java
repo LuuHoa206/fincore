@@ -18,6 +18,8 @@ import com.luuhoa.fincore.moneyjar.MoneyJarController;
 import com.luuhoa.fincore.moneyjar.MoneyJarService;
 import com.luuhoa.fincore.savinggoal.SavingGoalController;
 import com.luuhoa.fincore.savinggoal.SavingGoalService;
+import com.luuhoa.fincore.splitbill.SplitBillController;
+import com.luuhoa.fincore.splitbill.SplitBillService;
 import com.luuhoa.fincore.reporting.DashboardController;
 import com.luuhoa.fincore.reporting.DashboardService;
 import com.luuhoa.fincore.recurring.RecurringRuleController;
@@ -43,6 +45,7 @@ class ThreeLayerArchitectureTest {
         assertControllerUsesService(BudgetController.class, BudgetService.class);
         assertControllerUsesService(MoneyJarController.class, MoneyJarService.class);
         assertControllerUsesService(SavingGoalController.class, SavingGoalService.class);
+        assertControllerUsesService(SplitBillController.class, SplitBillService.class);
         assertControllerUsesService(DashboardController.class, DashboardService.class);
         assertControllerUsesService(RecurringRuleController.class, RecurringRuleService.class);
         assertControllerUsesService(WalletController.class, WalletService.class);

@@ -46,7 +46,23 @@ Category 1---n Transaction
 MoneyJar 1---n JarMovement
 MoneyJar 1---0..1 SavingGoal
 Category 1---n Budget
+User 1---n SplitBill
+SplitBill 1---n SplitBillParticipant
+SplitBillParticipant 1---n SplitBillPayment
+Transaction 1---0..1 SplitBill (original expense)
+Transaction 1---0..1 SplitBillPayment (reimbursement)
 ```
+
+## Nhóm chia hóa đơn
+
+- `split_bills`: khoản chi đã ghi vào sổ cái, phần của người trả và trạng thái khoản cần thu.
+- `split_bill_participants`: số tiền từng người cần hoàn, đã hoàn và còn lại.
+- `split_bill_payments`: liên kết mỗi lần hoàn tiền với giao dịch thu thật trong `financial_transactions`.
+
+`split_bills.expense_transaction_id` là duy nhất. Vì vậy một hóa đơn chia tiền
+luôn đối chiếu được với đúng một khoản chi. Mỗi
+`split_bill_payments.transaction_id` cũng duy nhất để một giao dịch thu không
+thể được gắn hai lần vào công nợ.
 
 ## Kiểu dữ liệu quan trọng
 

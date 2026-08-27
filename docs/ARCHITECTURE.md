@@ -19,6 +19,7 @@ Spring Boot
    |-- moneyjar
    |-- allocationrule
    |-- recurring
+   |-- splitbill
    |-- budget
    |-- savinggoal
    |-- reporting
@@ -113,6 +114,14 @@ hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
 - Tan suat thang luu ngay neo ban dau. Mot quy tac dat ngay 31 se dung ngay 28
   o thang Hai neu can, nhung se quay lai ngay 31 o thang Ba thay vi bi troi vinh
   vien thanh ngay 28.
+- Chia hoa don thuoc module `splitbill`. `SplitBillService` khong ghi truc tiep
+  vao `financial_transactions` hay `ledger_entries`: no goi `TransactionService`
+  de ghi mot khoan chi ban dau va mot khoan thu cho moi lan hoan tien. Service
+  khoa hoa don truoc khi ghi nhan hoan tien, kiem tra so tien con phai thu, luu
+  lien ket giao dich va cap nhat trang thai trong cung mot database transaction.
+  `TransactionReversalGuard` la extension point cua module transaction; module
+  split bill dung no de chan hoan tac truc tiep giao dich da lien ket, tranh so
+  cai va cong no bi lech nhau.
 
 ## Quy tac lien module
 
