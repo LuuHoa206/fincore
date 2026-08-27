@@ -24,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class CategoryController {
 
     private final CategoryService categoryService;
+    private final CategorySuggestionService categorySuggestionService;
 
-    public CategoryController(CategoryService categoryService) {
+    public CategoryController(CategoryService categoryService, CategorySuggestionService categorySuggestionService) {
         this.categoryService = categoryService;
+        this.categorySuggestionService = categorySuggestionService;
     }
 
     @GetMapping
@@ -34,6 +36,14 @@ public class CategoryController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) CategoryType type) {
         return categoryService.list(userId(jwt), type);
+    }
+
+    @GetMapping("/suggestions")
+    List<CategorySuggestionResponse> suggest(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam CategoryType type,
+            @RequestParam String description) {
+        return categorySuggestionService.suggest(userId(jwt), type, description);
     }
 
     @PostMapping

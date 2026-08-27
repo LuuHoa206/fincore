@@ -130,6 +130,16 @@ future transaction history can continue to reference it.
 
 ## Categories
 
+### Suggest a category from a transaction description
+
+`GET /categories/suggestions?type=EXPENSE&description=An%20com%20trua`
+
+Returns up to three visible categories whose names or baseline rule keywords
+match the provided description. Each result includes a human-readable reason.
+This is an explainable assistant only: it does not create a category, change a
+form value, or write a transaction. The client must let the user choose a
+suggestion explicitly.
+
 Category responses include system defaults (`systemCategory: true`) and the
 authenticated user's own active categories. System defaults are read-only;
 users can create, update, and archive only their own categories.

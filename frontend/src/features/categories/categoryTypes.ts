@@ -12,6 +12,15 @@ export type Category = {
   createdAt: string
 }
 
+export type CategorySuggestion = {
+  categoryId: string
+  categoryName: string
+  categoryType: CategoryType
+  systemCategory: boolean
+  reason: string
+  score: number
+}
+
 export type CreateCategoryInput = {
   name: string
   categoryType: CategoryType

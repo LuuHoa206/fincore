@@ -1,9 +1,13 @@
 import { httpClient } from '../../shared/api/httpClient'
-import type { Category, CategoryType, CreateCategoryInput, UpdateCategoryInput } from './categoryTypes'
+import type { Category, CategorySuggestion, CategoryType, CreateCategoryInput, UpdateCategoryInput } from './categoryTypes'
 
 export const categoryApi = {
   list: async (type?: CategoryType) => {
     const { data } = await httpClient.get<Category[]>('/categories', { params: type ? { type } : undefined })
+    return data
+  },
+  suggest: async (type: CategoryType, description: string) => {
+    const { data } = await httpClient.get<CategorySuggestion[]>('/categories/suggestions', { params: { type, description } })
     return data
   },
   create: async (input: CreateCategoryInput) => {
