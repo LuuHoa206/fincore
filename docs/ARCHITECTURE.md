@@ -129,6 +129,13 @@ hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
 - Service duoc phep goi public service cua module khac khi can; khong truy cap truc tiep repository noi bo cua module khac.
 - Khi luong nghiep vu lon hon, uu tien domain event/outbox cho audit, thong bao va reporting thay vi lam controller phinh to.
 
+## Observability va van hanh
+
+- `CorrelationIdFilter` chay truoc request processing, nhan hoac tao `X-Correlation-Id`, dua gia tri nay vao MDC va tra lai trong response. ID duoc xoa khoi MDC sau request de khong bi dung lai boi thread pool.
+- Log request co cau truc `method`, `path`, `status` va `duration_ms`; khong ghi body, token, header xac thuc hay query parameter.
+- Actuator chi expose `health`, `info` va `metrics`. Health probe la public de nen tang deploy kiem tra liveness/readiness; info va metrics can xac thuc.
+- Huong dan endpoint, xu ly su co va quy tac bao ve du lieu van hanh duoc ghi trong `docs/OPERATIONS.md`.
+
 ## Huong mo rong
 
 - Redis cho cache dashboard, rate-limit va idempotency phan tan.

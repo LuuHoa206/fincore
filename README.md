@@ -93,6 +93,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 - [Data model](docs/DATA_MODEL.md)
 - [Financial rules](docs/FINANCIAL_RULES.md)
 - [API contract](docs/API.md)
+- [Operations guide](docs/OPERATIONS.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Git workflow](docs/GIT_WORKFLOW.md)
 
@@ -110,3 +111,7 @@ filtered and paginated by the API instead of a client-side sample.
 Backend modules follow a documented three-layer MVC convention: controllers
 handle HTTP and DTO validation, services own business rules and transactions,
 and repositories isolate data access. See [Architecture](docs/ARCHITECTURE.md).
+
+The observability foundation now provides health/readiness probes, authenticated
+metrics and correlation IDs on every HTTP response. See the
+[Operations guide](docs/OPERATIONS.md) for safe monitoring and incident response.

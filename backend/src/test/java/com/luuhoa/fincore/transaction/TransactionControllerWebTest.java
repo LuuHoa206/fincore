@@ -25,7 +25,11 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(TransactionController.class)
 @Import({SecurityConfig.class, GlobalExceptionHandler.class})
-@TestPropertySource(properties = "logging.level.root=WARN")
+@TestPropertySource(properties = {
+        "debug=false",
+        "logging.level.root=WARN",
+        "logging.level.org.springframework=WARN"
+})
 class TransactionControllerWebTest {
 
     @Autowired
@@ -39,7 +43,8 @@ class TransactionControllerWebTest {
         mockMvc.perform(post("/api/v1/transactions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("X-Correlation-Id"));
 
         verifyNoInteractions(transactionService);
     }
