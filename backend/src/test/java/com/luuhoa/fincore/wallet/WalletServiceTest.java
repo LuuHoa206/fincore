@@ -7,12 +7,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
+import com.luuhoa.fincore.shared.api.ConflictException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,5 +72,52 @@ class WalletServiceTest {
 
         verify(walletRepository).findByIdAndUserIdAndArchivedFalse(walletId, userId);
         verify(walletRepository, never()).findById(walletId);
+    }
+
+    @Test
+    void locksAndReturnsTheRequestedWalletsForAnInternalTransfer() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet source = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Wallet destination = new Wallet(user, "Bank", WalletType.BANK, "VND", false);
+        setId(source, sourceId);
+        setId(destination, destinationId);
+        when(walletRepository.findOwnedActiveByIdsForUpdate(userId, List.of(sourceId, destinationId)))
+                .thenReturn(List.of(destination, source));
+
+        WalletTransferPair result = service.lockOwnedWalletsForTransfer(userId, sourceId, destinationId);
+
+        assertThat(result.source()).isSameAs(source);
+        assertThat(result.destination()).isSameAs(destination);
+    }
+
+    @Test
+    void rejectsTransfersBetweenDifferentCurrencies() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet source = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Wallet destination = new Wallet(user, "USD", WalletType.BANK, "USD", false);
+        setId(source, sourceId);
+        setId(destination, destinationId);
+        when(walletRepository.findOwnedActiveByIdsForUpdate(userId, List.of(sourceId, destinationId)))
+                .thenReturn(List.of(source, destination));
+
+        assertThatThrownBy(() -> service.lockOwnedWalletsForTransfer(userId, sourceId, destinationId))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("same currency");
+    }
+
+    private UserAccount user() {
+        return new UserAccount("owner@example.com", "hash", "Owner", "VND", "Asia/Ho_Chi_Minh");
+    }
+
+    private void setId(Object target, UUID id) throws Exception {
+        Field field = target.getClass().getDeclaredField("id");
+        field.setAccessible(true);
+        field.set(target, id);
     }
 }

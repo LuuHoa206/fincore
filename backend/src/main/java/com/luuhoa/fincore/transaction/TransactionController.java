@@ -48,6 +48,15 @@ public class TransactionController {
         return transactionService.create(userId(jwt), request, idempotencyKey);
     }
 
+    @PostMapping("/transfers")
+    @ResponseStatus(HttpStatus.CREATED)
+    TransactionResponse transfer(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestHeader(name = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody CreateWalletTransferRequest request) {
+        return transactionService.createTransfer(userId(jwt), request, idempotencyKey);
+    }
+
     @PostMapping("/{transactionId}/reverse")
     @ResponseStatus(HttpStatus.CREATED)
     TransactionResponse reverse(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID transactionId) {

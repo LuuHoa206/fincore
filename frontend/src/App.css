@@ -101,6 +101,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .transaction-list article:last-child { border-bottom: 0; }
 .transaction-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 7px; color: #c85454; background: #fdecec; }
 .transaction-icon.is-income { color: #0b8066; background: #e1f6ef; }
+.transaction-icon.is-transfer { color: #3c6e9f; background: #e8f2fb; }
 .transaction-icon svg { width: 17px; }
 .transaction-name { display: grid; gap: 3px; }
 .transaction-name strong { font-size: 13px; }
@@ -109,6 +110,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .transaction-list > article > strong { text-align: right; font-size: 13px; }
 .amount-income { color: #0b8066; }
 .amount-expense { color: #c85454; }
+.amount-transfer { color: #3c6e9f; }
 .category-name { display: inline-flex; align-items: center; gap: 7px; color: #52615c; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .category-name i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: var(--green-600); }
 
@@ -138,6 +140,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .page-subtitle { max-width: 620px; margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .wallet-topbar { align-items: flex-end; }
 .wallet-topbar .primary-button { flex: 0 0 auto; }
+.transaction-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .wallet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .wallet-card {
   min-height: 224px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line);
@@ -327,6 +330,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .wallet-form input, .wallet-form select, .auth-form input { width: 100%; min-height: 45px; padding: 0 13px; border: 1px solid #ccd9d4; border-radius: 6px; color: var(--ink); background: #fff; outline: 0; }
 .wallet-form input:focus, .wallet-form select:focus, .auth-form input:focus { border-color: var(--green-600); box-shadow: 0 0 0 3px rgba(15, 143, 114, .1); }
 .wallet-form input:disabled { color: #7e8c87; background: #f0f4f2; }
+.wallet-form select:disabled { color: #7e8c87; background: #f0f4f2; cursor: not-allowed; }
 .form-row { display: grid; grid-template-columns: 1.5fr .7fr; gap: 13px; }
 .wallet-form .check-row { grid-template-columns: 18px 1fr; align-items: start; padding: 13px; border: 1px solid var(--line); border-radius: 6px; background: #f7faf9; }
 .check-row input { width: 16px; min-height: 16px; margin: 2px 0 0; accent-color: var(--green-600); }
@@ -435,6 +439,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .transaction-list article { grid-template-columns: 38px 1fr auto; padding: 10px 0; }
   .transaction-list time { display: none; }
   .wallet-topbar { align-items: flex-start; }
+  .transaction-actions { justify-content: flex-start; }
   .wallet-grid { grid-template-columns: 1fr; }
   .category-grid { grid-template-columns: 1fr; }
   .jar-grid { grid-template-columns: 1fr; }
@@ -458,6 +463,8 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .transaction-list > article > strong { font-size: 11px; }
   .wallet-topbar { display: grid; }
   .wallet-topbar .primary-button { width: 100%; }
+  .transaction-actions { display: grid; grid-template-columns: 1fr; }
+  .transaction-actions button { width: 100%; }
   .form-row { grid-template-columns: 1fr; }
   .allocation-rule-summary { grid-template-columns: auto 1fr; }
   .allocation-rule-summary p { grid-column: 1 / -1; }

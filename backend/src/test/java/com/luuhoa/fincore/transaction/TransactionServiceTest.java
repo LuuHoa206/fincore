@@ -24,6 +24,7 @@ import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
+import com.luuhoa.fincore.wallet.WalletTransferPair;
 import com.luuhoa.fincore.wallet.WalletType;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -167,8 +168,8 @@ class TransactionServiceTest {
 
         when(transactionRepository.searchByUser(userId, TransactionType.EXPENSE, "lunch", null, null, pageRequest))
                 .thenReturn(new PageImpl<>(List.of(transaction), pageRequest, 11));
-        when(ledgerEntryRepository.findFirstByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET))
-                .thenReturn(Optional.of(entry));
+        when(ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET))
+                .thenReturn(List.of(entry));
 
         TransactionPageResponse result = service.search(userId, TransactionType.EXPENSE, " lunch ", null, null, 1, 10);
 
@@ -177,6 +178,86 @@ class TransactionServiceTest {
         assertThat(result.size()).isEqualTo(10);
         assertThat(result.totalElements()).isEqualTo(11);
         assertThat(result.totalPages()).isEqualTo(2);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void recordsAnInternalTransferAsTwoBalancedWalletEntries() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID sourceWalletId = UUID.randomUUID();
+        UUID destinationWalletId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet source = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Wallet destination = new Wallet(user, "Bank", WalletType.BANK, "VND", false);
+        setId(source, sourceWalletId);
+        setId(destination, destinationWalletId);
+        source.applyBalance(new BigDecimal("1000000"));
+        CreateWalletTransferRequest request = new CreateWalletTransferRequest(
+                sourceWalletId,
+                destinationWalletId,
+                new BigDecimal("250000"),
+                "Nộp tiền vào ngân hàng",
+                "Cuối ngày",
+                Instant.parse("2026-08-27T10:30:00Z"));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(walletService.lockOwnedWalletsForTransfer(userId, sourceWalletId, destinationWalletId))
+                .thenReturn(new WalletTransferPair(source, destination));
+
+        TransactionResponse response = service.createTransfer(userId, request, "transfer-2026-08-27-1");
+
+        assertThat(source.getCurrentBalance()).isEqualByComparingTo("750000");
+        assertThat(destination.getCurrentBalance()).isEqualByComparingTo("250000");
+        assertThat(response.transactionType()).isEqualTo(TransactionType.TRANSFER);
+        assertThat(response.walletName()).isEqualTo("Cash");
+        assertThat(response.counterpartyWalletName()).isEqualTo("Bank");
+        ArgumentCaptor<List<LedgerEntry>> entries = ArgumentCaptor.forClass(List.class);
+        verify(ledgerEntryRepository).saveAll(entries.capture());
+        assertThat(entries.getValue()).extracting(LedgerEntry::getSignedAmount)
+                .containsExactlyInAnyOrder(new BigDecimal("-250000"), new BigDecimal("250000"));
+        verify(transactionRepository).save(any(FinancialTransaction.class));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void reversesBothWalletSidesOfAnInternalTransfer() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID sourceWalletId = UUID.randomUUID();
+        UUID destinationWalletId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet source = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Wallet destination = new Wallet(user, "Bank", WalletType.BANK, "VND", false);
+        setId(source, sourceWalletId);
+        setId(destination, destinationWalletId);
+        source.applyBalance(new BigDecimal("750000"));
+        destination.applyBalance(new BigDecimal("250000"));
+        FinancialTransaction original = new FinancialTransaction(
+                user, null, TransactionType.TRANSFER, new BigDecimal("250000"), "VND", "Nộp tiền vào ngân hàng", null, Instant.now(), null);
+        setId(original, transactionId);
+        LedgerEntry sourceEntry = LedgerEntry.walletEntry(original, source, new BigDecimal("-250000"));
+        LedgerEntry destinationEntry = LedgerEntry.walletEntry(original, destination, new BigDecimal("250000"));
+
+        when(transactionRepository.findOwnedForUpdate(transactionId, userId)).thenReturn(Optional.of(original));
+        when(transactionRepository.existsByReversedTransactionId(transactionId)).thenReturn(false);
+        when(ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET))
+                .thenReturn(List.of(sourceEntry, destinationEntry));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(walletService.lockOwnedWalletsForTransfer(userId, sourceWalletId, destinationWalletId))
+                .thenReturn(new WalletTransferPair(source, destination));
+
+        TransactionResponse response = service.reverse(userId, transactionId);
+
+        assertThat(source.getCurrentBalance()).isEqualByComparingTo("1000000");
+        assertThat(destination.getCurrentBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(original.getStatus()).isEqualTo(TransactionStatus.REVERSED);
+        assertThat(response.transactionType()).isEqualTo(TransactionType.REVERSAL);
+        assertThat(response.walletName()).isEqualTo("Bank");
+        assertThat(response.counterpartyWalletName()).isEqualTo("Cash");
+        ArgumentCaptor<List<LedgerEntry>> entries = ArgumentCaptor.forClass(List.class);
+        verify(ledgerEntryRepository).saveAll(entries.capture());
+        assertThat(entries.getValue()).extracting(LedgerEntry::getSignedAmount)
+                .containsExactlyInAnyOrder(new BigDecimal("250000"), new BigDecimal("-250000"));
     }
 
     @Test

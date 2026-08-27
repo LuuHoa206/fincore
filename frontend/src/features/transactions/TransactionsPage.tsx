@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -11,9 +11,9 @@ import { walletApi } from '../wallets/walletApi'
 import type { Wallet } from '../wallets/walletTypes'
 import { transactionApi } from './transactionApi'
 import { formatCurrency, formatDateTime } from './transactionFormatters'
-import type { CreateTransactionInput, Transaction, TransactionType } from './transactionTypes'
+import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionType } from './transactionTypes'
 
-type Filter = 'ALL' | 'INCOME' | 'EXPENSE'
+type Filter = 'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'
 
 const transactionSchema = z.object({
   walletId: z.string().uuid('Hãy chọn một ví'),
@@ -28,9 +28,24 @@ const transactionSchema = z.object({
 
 type TransactionForm = z.input<typeof transactionSchema>
 
+const transferSchema = z.object({
+  sourceWalletId: z.string().uuid('Hãy chọn ví nguồn'),
+  destinationWalletId: z.string().uuid('Hãy chọn ví nhận'),
+  amount: z.coerce.number().positive('Số tiền phải lớn hơn 0').finite(),
+  description: z.string().trim().min(2, 'Nội dung cần ít nhất 2 ký tự').max(255),
+  notes: z.string().trim().max(4000).optional(),
+  occurredAt: z.string().min(1, 'Hãy chọn thời gian chuyển'),
+}).refine((value) => value.sourceWalletId !== value.destinationWalletId, {
+  path: ['destinationWalletId'],
+  message: 'Ví nhận phải khác ví nguồn',
+})
+
+type TransferForm = z.input<typeof transferSchema>
+
 export function TransactionsPage() {
   const queryClient = useQueryClient()
   const [formOpen, setFormOpen] = useState(false)
+  const [transferFormOpen, setTransferFormOpen] = useState(false)
   const [reverseTarget, setReverseTarget] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState<Filter>('ALL')
   const [query, setQuery] = useState('')
@@ -61,11 +76,16 @@ export function TransactionsPage() {
   const totalTransactions = transactionsQuery.data?.totalElements ?? 0
 
   const canCreate = Boolean(walletsQuery.data?.length && categoriesQuery.data?.length)
+  const canDisplayWorkspace = Boolean(walletsQuery.data?.length)
+  const canTransfer = Boolean(walletsQuery.data?.some((wallet) => walletsQuery.data.some((candidate) => candidate.id !== wallet.id && candidate.currency === wallet.currency)))
 
   return <>
     <header className="topbar transaction-topbar">
       <div><p className="eyebrow">DÒNG TIỀN HẰNG NGÀY</p><h1>Giao dịch</h1><p className="page-subtitle">Ghi nhận thu nhập và chi tiêu theo từng ví. Số dư được cập nhật ngay sau khi giao dịch được tạo.</p></div>
-      <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
+      <div className="transaction-actions">
+        <button className="secondary-button" disabled={!canTransfer} onClick={() => setTransferFormOpen(true)} title={canTransfer ? 'Chuyển tiền giữa hai ví cùng loại tiền tệ' : 'Cần ít nhất hai ví cùng tiền tệ'}><ArrowLeftRight /> Chuyển tiền</button>
+        <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
+      </div>
     </header>
 
     {actionError && <div className="form-alert page-alert" role="alert">{actionError}<button onClick={() => setActionError('')} aria-label="Đóng"><X /></button></div>}
@@ -74,11 +94,11 @@ export function TransactionsPage() {
     {!walletsQuery.isPending && !walletsQuery.data?.length && <section className="content-state"><WalletCards /><strong>Chưa có ví để ghi giao dịch</strong><p>Tạo ít nhất một ví tiền trước khi thêm khoản thu hoặc chi đầu tiên.</p></section>}
     {!categoriesQuery.isPending && !categoriesQuery.data?.length && <section className="content-state"><FileText /><strong>Chưa có danh mục để ghi giao dịch</strong><p>Hãy tạo một danh mục thu hoặc chi trước khi ghi nhận giao dịch.</p></section>}
 
-    {canCreate && <section className="panel transactions-workspace">
+    {canDisplayWorkspace && <section className="panel transactions-workspace">
       <div className="transaction-tools">
         <label className="transaction-search"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="Tìm theo nội dung, danh mục hoặc ghi chú" /></label>
         <div className="segmented-control" aria-label="Lọc loại giao dịch">
-          {([{ value: 'ALL', label: 'Tất cả' }, { value: 'INCOME', label: 'Thu' }, { value: 'EXPENSE', label: 'Chi' }] as const).map((item) =>
+          {([{ value: 'ALL', label: 'Tất cả' }, { value: 'INCOME', label: 'Thu' }, { value: 'EXPENSE', label: 'Chi' }, { value: 'TRANSFER', label: 'Chuyển tiền' }] as const).map((item) =>
             <button key={item.value} className={filter === item.value ? 'selected' : ''} onClick={() => { setFilter(item.value); setPage(0) }}>{item.label}</button>,
           )}
         </div>
@@ -97,6 +117,11 @@ export function TransactionsPage() {
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
       void queryClient.invalidateQueries({ queryKey: ['wallets'] })
     }} />}
+    {transferFormOpen && walletsQuery.data && <TransferFormModal wallets={walletsQuery.data} onClose={() => setTransferFormOpen(false)} onSaved={() => {
+      setTransferFormOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      void queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    }} />}
     {reverseTarget && <ReverseModal transaction={reverseTarget} isPending={reverseMutation.isPending} onCancel={() => setReverseTarget(null)} onConfirm={() => reverseMutation.mutate(reverseTarget.id)} />}
   </>
 }
@@ -111,19 +136,63 @@ function TransactionPagination({ page, totalPages, totalElements, onChange }: { 
 
 function TransactionRow({ transaction, onReverse }: { transaction: Transaction; onReverse: () => void }) {
   const isIncome = transaction.transactionType === 'INCOME'
+  const isTransfer = transaction.transactionType === 'TRANSFER' || (transaction.transactionType === 'REVERSAL' && transaction.counterpartyWalletId !== null)
   const isReversal = transaction.transactionType === 'REVERSAL'
   const canReverse = transaction.status === 'POSTED' && !isReversal
   const typeLabel: Record<TransactionType, string> = { INCOME: 'Thu nhập', EXPENSE: 'Chi tiêu', TRANSFER: 'Chuyển tiền', JAR_TRANSFER: 'Phân bổ hũ', REFUND: 'Hoàn tiền', ADJUSTMENT: 'Điều chỉnh', REVERSAL: 'Hoàn tác' }
 
   return <tr>
-    <td><div className="transaction-primary"><span className={`transaction-icon ${isIncome ? 'is-income' : ''}`}>{isIncome ? <ArrowDownLeft /> : <ArrowUpRight />}</span><div><strong>{transaction.description}</strong><small>{typeLabel[transaction.transactionType]}{transaction.notes ? ` · ${transaction.notes}` : ''}</small></div></div></td>
-    <td><span className="category-name"><i style={{ backgroundColor: transaction.categoryColor ?? undefined }} />{transaction.categoryName ?? 'Chưa phân loại'}</span></td>
-    <td>{transaction.walletName}</td>
+    <td><div className="transaction-primary"><span className={`transaction-icon ${isIncome ? 'is-income' : isTransfer ? 'is-transfer' : ''}`}>{isIncome ? <ArrowDownLeft /> : isTransfer ? <ArrowLeftRight /> : <ArrowUpRight />}</span><div><strong>{transaction.description}</strong><small>{typeLabel[transaction.transactionType]}{transaction.notes ? ` · ${transaction.notes}` : ''}</small></div></div></td>
+    <td><span className="category-name"><i style={{ backgroundColor: transaction.categoryColor ?? (isTransfer ? '#0f8f72' : undefined) }} />{transaction.categoryName ?? (isTransfer ? 'Chuyển nội bộ' : 'Chưa phân loại')}</span></td>
+    <td>{transaction.counterpartyWalletName ? `${transaction.walletName} → ${transaction.counterpartyWalletName}` : transaction.walletName}</td>
     <td><time>{formatDateTime(transaction.occurredAt)}</time></td>
     <td><span className={`status-pill ${transaction.status.toLowerCase()}`}>{statusLabel(transaction.status)}</span></td>
-    <td className={`numeric-cell amount-cell ${isIncome ? 'amount-income' : 'amount-expense'}`}>{isIncome ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency)}</td>
+    <td className={`numeric-cell amount-cell ${isIncome ? 'amount-income' : isTransfer ? 'amount-transfer' : 'amount-expense'}`}>{isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(transaction.amount, transaction.currency)}</td>
     <td className="action-cell">{canReverse && <button className="icon-button" title="Hoàn tác giao dịch" aria-label={`Hoàn tác ${transaction.description}`} onClick={onReverse}><RotateCcw /></button>}</td>
   </tr>
+}
+
+function TransferFormModal({ wallets, onClose, onSaved }: { wallets: Wallet[]; onClose: () => void; onSaved: () => void }) {
+  const [submitError, setSubmitError] = useState('')
+  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<TransferForm>({
+    resolver: zodResolver(transferSchema),
+    defaultValues: { sourceWalletId: wallets[0]?.id, destinationWalletId: '', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue() },
+  })
+  const sourceWalletId = useWatch({ control, name: 'sourceWalletId' })
+  const destinationWalletId = useWatch({ control, name: 'destinationWalletId' })
+  const sourceWallet = wallets.find((wallet) => wallet.id === sourceWalletId)
+  const destinationWallets = wallets.filter((wallet) => wallet.id !== sourceWalletId && wallet.currency === sourceWallet?.currency)
+
+  useEffect(() => {
+    if (!destinationWallets.some((wallet) => wallet.id === destinationWalletId)) {
+      setValue('destinationWalletId', destinationWallets[0]?.id ?? '', { shouldValidate: true })
+    }
+  }, [destinationWalletId, destinationWallets, setValue])
+
+  const onSubmit = handleSubmit(async (rawValues) => {
+    setSubmitError('')
+    const values = transferSchema.parse(rawValues)
+    const input: CreateWalletTransferInput = { ...values, occurredAt: new Date(values.occurredAt).toISOString(), notes: values.notes || undefined }
+    try {
+      await transactionApi.transfer(input, crypto.randomUUID())
+      onSaved()
+    } catch (error) {
+      setSubmitError(getApiErrorMessage(error, 'Không thể chuyển tiền giữa các ví.'))
+    }
+  })
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="modal transaction-modal" role="dialog" aria-modal="true" aria-labelledby="transfer-form-title">
+    <header><div><p className="eyebrow">ĐIỀU CHUYỂN NỘI BỘ</p><h2 id="transfer-form-title">Chuyển tiền giữa các ví</h2></div><button className="icon-button" onClick={onClose} aria-label="Đóng"><X /></button></header>
+    <form className="wallet-form" onSubmit={onSubmit} noValidate>
+      {submitError && <div className="form-alert" role="alert">{submitError}</div>}
+      <div className="form-row"><label><span>Ví nguồn</span><select {...register('sourceWalletId')}>{wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name} · {formatCurrency(wallet.currentBalance, wallet.currency)}</option>)}</select>{errors.sourceWalletId && <small className="field-error">{errors.sourceWalletId.message}</small>}</label><label><span>Ví nhận</span><select {...register('destinationWalletId')} disabled={!destinationWallets.length}>{destinationWallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name} · {formatCurrency(wallet.currentBalance, wallet.currency)}</option>)}</select>{errors.destinationWalletId && <small className="field-error">{errors.destinationWalletId.message}</small>}</label></div>
+      <label><span>Số tiền {sourceWallet ? `(${sourceWallet.currency})` : ''}</span><input type="number" min="1" step={sourceWallet?.currency === 'VND' ? '1' : '0.01'} placeholder="0" {...register('amount')} />{errors.amount && <small className="field-error">{errors.amount.message}</small>}</label>
+      <label><span>Nội dung</span><input placeholder="Ví dụ: Nộp tiền mặt vào ngân hàng" {...register('description')} />{errors.description && <small className="field-error">{errors.description.message}</small>}</label>
+      <label><span>Thời gian chuyển</span><input type="datetime-local" {...register('occurredAt')} />{errors.occurredAt && <small className="field-error">{errors.occurredAt.message}</small>}</label>
+      <label><span>Ghi chú</span><textarea placeholder="Không bắt buộc" {...register('notes')} /></label>
+      <footer><button type="button" className="plain-button" onClick={onClose}>Hủy</button><button className="primary-button" disabled={isSubmitting || !destinationWallets.length}>{isSubmitting ? <LoaderCircle className="spin" /> : <><ArrowLeftRight /> Xác nhận chuyển tiền</>}</button></footer>
+    </form>
+  </section></div>
 }
 
 function TransactionFormModal({ wallets, categories, onClose, onSaved }: { wallets: Wallet[]; categories: Category[]; onClose: () => void; onSaved: () => void }) {

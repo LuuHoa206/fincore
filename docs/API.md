@@ -385,6 +385,33 @@ visible to the user and have the matching type. Reusing the same
 `Idempotency-Key` returns the original recorded transaction instead of posting
 another balance change.
 
+### Transfer between wallets
+
+`POST /transactions/transfers`
+
+```http
+Idempotency-Key: b15a2272-3d91-4d5b-851d-6737c0d72a2c
+```
+
+```json
+{
+  "sourceWalletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "destinationWalletId": "2ee046e8-faa7-438d-b01a-3dcefc7712bf",
+  "amount": 500000,
+  "description": "Move cash to bank",
+  "notes": "Weekend deposit",
+  "occurredAt": "2026-08-27T03:30:00Z"
+}
+```
+
+The two wallets must be different, active, owned by the authenticated user,
+and use the same currency. The service locks both rows in a stable database
+order, checks the source balance, then records one `TRANSFER` and two opposite
+wallet ledger entries in one database transaction. It is therefore neither
+income nor expense and does not change total assets. Reversal restores both
+wallet balances through a new counter-transaction; the original transfer stays
+in the audit trail.
+
 ### Reverse a transaction
 
 `POST /transactions/{transactionId}/reverse`

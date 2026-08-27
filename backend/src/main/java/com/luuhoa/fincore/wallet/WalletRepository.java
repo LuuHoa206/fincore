@@ -31,4 +31,16 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
             order by wallet.id
             """)
     List<Wallet> findAllActiveByUserIdForUpdate(@Param("userId") UUID userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select wallet from Wallet wallet
+            where wallet.user.id = :userId
+              and wallet.archived = false
+              and wallet.id in :walletIds
+            order by wallet.id
+            """)
+    List<Wallet> findOwnedActiveByIdsForUpdate(
+            @Param("userId") UUID userId,
+            @Param("walletIds") List<UUID> walletIds);
 }

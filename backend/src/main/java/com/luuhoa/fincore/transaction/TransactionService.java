@@ -18,6 +18,7 @@ import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
+import com.luuhoa.fincore.wallet.WalletTransferPair;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -154,6 +155,43 @@ public class TransactionService {
     }
 
     @Transactional
+    public TransactionResponse createTransfer(UUID userId, CreateWalletTransferRequest request, String idempotencyKey) {
+        String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
+        if (normalizedKey != null) {
+            FinancialTransaction existing = transactionRepository.findByUserIdAndIdempotencyKey(userId, normalizedKey)
+                    .orElse(null);
+            if (existing != null) {
+                return toResponse(existing);
+            }
+        }
+
+        WalletTransferPair wallets = walletService.lockOwnedWalletsForTransfer(
+                userId,
+                request.sourceWalletId(),
+                request.destinationWalletId());
+        BigDecimal amount = validateAndNormalizeAmount(request.amount(), wallets.source().getCurrency());
+        wallets.source().applyBalance(amount.negate());
+        wallets.destination().applyBalance(amount);
+
+        FinancialTransaction transfer = new FinancialTransaction(
+                requireUser(userId),
+                null,
+                TransactionType.TRANSFER,
+                amount,
+                wallets.source().getCurrency(),
+                request.description().trim(),
+                normalizeNotes(request.notes()),
+                request.occurredAt(),
+                normalizedKey);
+        transactionRepository.save(transfer);
+        ledgerEntryRepository.saveAll(List.of(
+                LedgerEntry.walletEntry(transfer, wallets.source(), amount.negate()),
+                LedgerEntry.walletEntry(transfer, wallets.destination(), amount)));
+
+        return TransactionResponse.from(transfer, wallets.source(), wallets.destination());
+    }
+
+    @Transactional
     public TransactionResponse reverse(UUID userId, UUID transactionId) {
         FinancialTransaction original = transactionRepository.findOwnedForUpdate(transactionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_NOT_FOUND", "Transaction was not found"));
@@ -162,27 +200,77 @@ public class TransactionService {
             throw new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "This transaction has already been reversed or cannot be reversed");
         }
 
-        LedgerEntry originalWalletEntry = ledgerEntryRepository.findFirstByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET)
-                .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found"));
-        Wallet originalWallet = originalWalletEntry.getWallet();
-        Wallet wallet = walletService.requireOwnedWalletForTransaction(userId, originalWallet.getId());
-        BigDecimal reversalAmount = originalWalletEntry.getSignedAmount().negate();
-
-        wallet.applyBalance(reversalAmount);
+        List<LedgerEntry> walletEntries = ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET);
+        if (walletEntries.isEmpty()) {
+            throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found");
+        }
         FinancialTransaction reversal = FinancialTransaction.reversalOf(original, requireUser(userId));
-        transactionRepository.save(reversal);
-        ledgerEntryRepository.saveAll(List.of(
-                LedgerEntry.walletEntry(reversal, wallet, reversalAmount),
-                LedgerEntry.externalEntry(reversal, EXTERNAL_ACCOUNT, reversalAmount.negate(), wallet.getCurrency())));
+        TransactionResponse response;
+        if (walletEntries.size() == 1) {
+            LedgerEntry originalWalletEntry = walletEntries.getFirst();
+            Wallet wallet = walletService.requireOwnedWalletForTransaction(userId, originalWalletEntry.getWallet().getId());
+            BigDecimal reversalAmount = originalWalletEntry.getSignedAmount().negate();
+            wallet.applyBalance(reversalAmount);
+            transactionRepository.save(reversal);
+            ledgerEntryRepository.saveAll(List.of(
+                    LedgerEntry.walletEntry(reversal, wallet, reversalAmount),
+                    LedgerEntry.externalEntry(reversal, EXTERNAL_ACCOUNT, reversalAmount.negate(), wallet.getCurrency())));
+            response = TransactionResponse.from(reversal, wallet);
+        } else if (original.getTransactionType() == TransactionType.TRANSFER && walletEntries.size() == 2) {
+            WalletTransferPair lockedWallets = walletService.lockOwnedWalletsForTransfer(
+                    userId,
+                    walletEntries.get(0).getWallet().getId(),
+                    walletEntries.get(1).getWallet().getId());
+            List<LedgerEntry> reversalEntries = walletEntries.stream()
+                    .map(entry -> {
+                        Wallet wallet = entry.getWallet().getId().equals(lockedWallets.source().getId())
+                                ? lockedWallets.source()
+                                : lockedWallets.destination();
+                        BigDecimal reversalAmount = entry.getSignedAmount().negate();
+                        wallet.applyBalance(reversalAmount);
+                        return LedgerEntry.walletEntry(reversal, wallet, reversalAmount);
+                    })
+                    .toList();
+            transactionRepository.save(reversal);
+            ledgerEntryRepository.saveAll(reversalEntries);
+            LedgerEntry sourceEntry = reversalEntries.stream()
+                    .filter(entry -> entry.getSignedAmount().signum() < 0)
+                    .findFirst()
+                    .orElseThrow(() -> new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transfer reversal is inconsistent"));
+            LedgerEntry destinationEntry = reversalEntries.stream()
+                    .filter(entry -> entry.getSignedAmount().signum() > 0)
+                    .findFirst()
+                    .orElseThrow(() -> new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transfer reversal is inconsistent"));
+            response = TransactionResponse.from(reversal, sourceEntry.getWallet(), destinationEntry.getWallet());
+        } else {
+            throw new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transaction ledger entries are inconsistent");
+        }
         original.markReversed();
 
-        return TransactionResponse.from(reversal, wallet);
+        return response;
     }
 
     private TransactionResponse toResponse(FinancialTransaction transaction) {
-        LedgerEntry walletEntry = ledgerEntryRepository.findFirstByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET)
-                .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found"));
-        return TransactionResponse.from(transaction, walletEntry.getWallet());
+        List<LedgerEntry> walletEntries = ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET);
+        if (walletEntries.isEmpty()) {
+            throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found");
+        }
+        if (walletEntries.size() == 1) {
+            return TransactionResponse.from(transaction, walletEntries.getFirst().getWallet());
+        }
+        if (walletEntries.size() == 2 && (transaction.getTransactionType() == TransactionType.TRANSFER
+                || transaction.getTransactionType() == TransactionType.REVERSAL)) {
+            LedgerEntry sourceEntry = walletEntries.stream()
+                    .filter(entry -> entry.getSignedAmount().signum() < 0)
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transfer source entry was not found"));
+            LedgerEntry destinationEntry = walletEntries.stream()
+                    .filter(entry -> entry.getSignedAmount().signum() > 0)
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transfer destination entry was not found"));
+            return TransactionResponse.from(transaction, sourceEntry.getWallet(), destinationEntry.getWallet());
+        }
+        throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entries are inconsistent");
     }
 
     private UserAccount requireUser(UUID userId) {
