@@ -1,15 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, CircleDollarSign, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, Info, Lightbulb, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
 import { reportingApi } from '../features/reporting/reportingApi'
 import { formatCurrency, formatDateTime } from '../features/transactions/transactionFormatters'
 import type { Transaction } from '../features/transactions/transactionTypes'
+import type { FinancialInsight, FinancialInsightSeverity } from '../features/reporting/reportingTypes'
 
 export function DashboardPage() {
   const { user } = useAuth()
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: () => reportingApi.dashboard() })
+  const insightQuery = useQuery({ queryKey: ['monthly-insights'], queryFn: () => reportingApi.monthlyInsights() })
   const report = dashboardQuery.data
   const preferredCurrency = user?.preferredCurrency ?? 'VND'
   const summary = report?.currencySummaries.find((item) => item.currency === preferredCurrency) ?? report?.currencySummaries[0]
@@ -40,6 +42,16 @@ export function DashboardPage() {
 
       <section className="panel budget-panel"><div className="section-heading"><div><p className="eyebrow">KẾ HOẠCH TÀI CHÍNH</p><h2>Ngân sách và mục tiêu</h2></div><Link className="text-button" to="/budgets">Xem ngân sách <ChevronRight /></Link></div><div className="roadmap-card"><Target /><strong>{report?.budgetAlertCount ?? 0} ngân sách cần chú ý</strong><p>{report?.openSavingGoalCount ?? 0} mục tiêu tiết kiệm đang theo dõi. Tạo ngân sách theo tháng để chủ động kiểm soát chi tiêu.</p><Link to="/goals">Xem mục tiêu tiết kiệm</Link></div></section>
 
+      <section className="panel insights-panel">
+        <div className="section-heading"><div><p className="eyebrow">TRỢ LÝ PHÂN TÍCH</p><h2>Tóm tắt tài chính tháng</h2></div><Lightbulb className="insights-heading-icon" /></div>
+        <p className="insights-caption">Nhận xét được tạo từ các giao dịch, ngân sách và mục tiêu bạn đã ghi nhận.</p>
+        {insightQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tổng hợp dữ liệu</div>}
+        {insightQuery.isError && <div className="form-alert" role="alert">Không thể tải tóm tắt tài chính. Hãy thử làm mới trang.</div>}
+        {!insightQuery.isPending && !insightQuery.isError && <div className="insight-list">
+          {insightQuery.data?.insights.map((insight) => <InsightItem key={insight.key} insight={insight} />)}
+        </div>}
+      </section>
+
       <section className="panel transactions-panel" id="transactions"><div className="section-heading"><div><p className="eyebrow">HOẠT ĐỘNG GẦN ĐÂY</p><h2>Giao dịch mới nhất</h2></div><Link className="text-button" to="/transactions">Xem tất cả <ChevronRight /></Link></div>
         {dashboardQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tải giao dịch</div>}
         {!dashboardQuery.isPending && !report?.recentTransactions.length && <div className="dashboard-empty"><ArrowUpRight /><span>Chưa có giao dịch nào</span><Link to="/transactions">Ghi nhận giao dịch đầu tiên</Link></div>}
@@ -47,6 +59,20 @@ export function DashboardPage() {
       </section>
     </div>
   </>
+}
+
+function InsightItem({ insight }: { insight: FinancialInsight }) {
+  const icon = insightIcon(insight.severity)
+  return <article className={`insight-item is-${insight.severity.toLowerCase()}`}>
+    <span className="insight-icon">{icon}</span>
+    <div><strong>{insight.title}</strong><p>{insight.message}</p></div>
+  </article>
+}
+
+function insightIcon(severity: FinancialInsightSeverity) {
+  if (severity === 'SUCCESS') return <CircleCheck />
+  if (severity === 'WARNING' || severity === 'DANGER') return <CircleAlert />
+  return <Info />
 }
 
 function SummaryCard({ className, label, icon, value, detail, pending }: { className: string; label: string; icon: ReactNode; value: string; detail: string; pending: boolean }) {
