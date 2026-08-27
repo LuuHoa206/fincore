@@ -19,6 +19,7 @@ import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
 
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -46,6 +47,16 @@ public class RecurringRuleService {
     @Transactional(readOnly = true)
     public List<RecurringRuleResponse> list(UUID userId) {
         return recurringRuleRepository.findAllByUserIdWithDetails(userId).stream()
+                .map(RecurringRuleResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecurringRuleResponse> upcoming(UUID userId, int limit) {
+        if (limit < 1 || limit > 10) {
+            throw new IllegalArgumentException("Upcoming recurring-rule limit must be between 1 and 10");
+        }
+        return recurringRuleRepository.findEnabledByUserIdWithDetails(userId, PageRequest.of(0, limit)).stream()
                 .map(RecurringRuleResponse::from)
                 .toList();
     }

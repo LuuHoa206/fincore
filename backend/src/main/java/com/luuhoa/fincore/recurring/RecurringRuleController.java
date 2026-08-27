@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,6 +35,13 @@ public class RecurringRuleController {
     @GetMapping
     List<RecurringRuleResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return recurringRuleService.list(userId(jwt));
+    }
+
+    @GetMapping("/upcoming")
+    List<RecurringRuleResponse> upcoming(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "4") int limit) {
+        return recurringRuleService.upcoming(userId(jwt), limit);
     }
 
     @PostMapping

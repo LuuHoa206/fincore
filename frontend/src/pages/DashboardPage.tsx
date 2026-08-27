@@ -1,18 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, Info, Lightbulb, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, Info, Lightbulb, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
 import { reportingApi } from '../features/reporting/reportingApi'
+import { recurringApi } from '../features/recurring/recurringApi'
 import { formatCurrency, formatDateTime } from '../features/transactions/transactionFormatters'
 import type { Transaction } from '../features/transactions/transactionTypes'
 import type { FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
+import type { RecurringRule } from '../features/recurring/recurringTypes'
 
 export function DashboardPage() {
   const { user } = useAuth()
+  const [dashboardOpenedAt] = useState(() => Date.now())
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: () => reportingApi.dashboard() })
   const insightQuery = useQuery({ queryKey: ['monthly-insights'], queryFn: () => reportingApi.monthlyInsights() })
   const unusualExpenseQuery = useQuery({ queryKey: ['unusual-expenses'], queryFn: () => reportingApi.unusualExpenses() })
+  const upcomingRecurringQuery = useQuery({ queryKey: ['upcoming-recurring-rules', 4], queryFn: () => recurringApi.upcoming(4) })
   const report = dashboardQuery.data
   const preferredCurrency = user?.preferredCurrency ?? 'VND'
   const summary = report?.currencySummaries.find((item) => item.currency === preferredCurrency) ?? report?.currencySummaries[0]
@@ -42,6 +46,17 @@ export function DashboardPage() {
       </section>
 
       <section className="panel budget-panel"><div className="section-heading"><div><p className="eyebrow">KẾ HOẠCH TÀI CHÍNH</p><h2>Ngân sách và mục tiêu</h2></div><Link className="text-button" to="/budgets">Xem ngân sách <ChevronRight /></Link></div><div className="roadmap-card"><Target /><strong>{report?.budgetAlertCount ?? 0} ngân sách cần chú ý</strong><p>{report?.openSavingGoalCount ?? 0} mục tiêu tiết kiệm đang theo dõi. Tạo ngân sách theo tháng để chủ động kiểm soát chi tiêu.</p><Link to="/goals">Xem mục tiêu tiết kiệm</Link></div></section>
+
+      <section className="panel upcoming-recurring-panel">
+        <div className="section-heading"><div><p className="eyebrow">LỊCH THU CHI</p><h2>Kỳ sắp đến hạn</h2></div><Link className="text-button" to="/recurring">Quản lý lịch <ChevronRight /></Link></div>
+        <p className="insights-caption">Theo dõi các khoản thu chi lặp lại để chủ động ghi nhận đúng kỳ.</p>
+        {upcomingRecurringQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tải lịch thu chi</div>}
+        {upcomingRecurringQuery.isError && <div className="form-alert" role="alert">Không thể tải lịch thu chi. Hãy thử làm mới trang.</div>}
+        {!upcomingRecurringQuery.isPending && !upcomingRecurringQuery.isError && !upcomingRecurringQuery.data?.length && <div className="dashboard-empty upcoming-recurring-empty"><CalendarClock /><span>Chưa có lịch thu chi đang bật</span><Link to="/recurring">Tạo lịch thu chi</Link></div>}
+        {!!upcomingRecurringQuery.data?.length && <div className="upcoming-recurring-list">
+          {upcomingRecurringQuery.data.map((rule) => <UpcomingRecurringItem key={rule.id} rule={rule} dashboardOpenedAt={dashboardOpenedAt} />)}
+        </div>}
+      </section>
 
       <section className="panel insights-panel">
         <div className="section-heading"><div><p className="eyebrow">TRỢ LÝ PHÂN TÍCH</p><h2>Tóm tắt tài chính tháng</h2></div><Lightbulb className="insights-heading-icon" /></div>
@@ -92,6 +107,17 @@ function UnusualExpenseItem({ finding }: { finding: UnusualExpense }) {
   return <article className={`unusual-expense-item is-${finding.severity.toLowerCase()}`}>
     <div className="unusual-expense-main"><span className="unusual-expense-icon"><CircleAlert /></span><div><strong>{finding.description}</strong><small>{finding.categoryName} · {formatDateTime(finding.occurredAt)}</small><p>{finding.reason}</p></div></div>
     <div className="unusual-expense-value"><span className={`severity-badge is-${finding.severity.toLowerCase()}`}>{severityLabel}</span><strong>{formatCurrency(finding.amount, finding.currency)}</strong><small>Trung bình trước đó: {formatCurrency(finding.historicalAverageAmount, finding.currency)}</small></div>
+  </article>
+}
+
+function UpcomingRecurringItem({ rule, dashboardOpenedAt }: { rule: RecurringRule; dashboardOpenedAt: number }) {
+  const isDue = new Date(rule.nextRunAt).getTime() <= dashboardOpenedAt
+  const typeLabel = rule.transactionType === 'INCOME' ? 'Khoản thu' : 'Khoản chi'
+  const dueLabel = isDue ? 'Đến hạn' : `Kỳ tới: ${formatDateTime(rule.nextRunAt)}`
+  return <article className={`upcoming-recurring-item is-${rule.transactionType.toLowerCase()}${isDue ? ' is-due' : ''}`}>
+    <span className="upcoming-recurring-icon"><CalendarClock /></span>
+    <div className="upcoming-recurring-main"><strong>{rule.name}</strong><small>{typeLabel} · {rule.walletName} · {rule.categoryName}</small></div>
+    <div className="upcoming-recurring-value"><span className={isDue ? 'due-badge' : 'schedule-badge'}>{dueLabel}</span><strong>{rule.transactionType === 'INCOME' ? '+' : '-'}{formatCurrency(rule.amount, rule.currency)}</strong></div>
   </article>
 }
 

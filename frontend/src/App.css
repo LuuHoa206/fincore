@@ -164,6 +164,22 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .severity-badge.is-high { color: #a54646; background: #fde5e5; }
 .unusual-expenses-empty { grid-template-columns: 36px minmax(0, 1fr); }
 .unusual-expenses-empty small { grid-column: 2; color: var(--muted); font-size: 10px; }
+.upcoming-recurring-panel { grid-column: 1 / -1; }
+.upcoming-recurring-list { display: grid; gap: 9px; }
+.upcoming-recurring-item { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px 13px; border: 1px solid #e5eeea; border-left: 3px solid #0b8066; border-radius: 7px; background: #fbfefd; }
+.upcoming-recurring-item.is-expense { border-left-color: #c85454; }
+.upcoming-recurring-item.is-due { background: #fffdf5; }
+.upcoming-recurring-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 7px; color: #0b8066; background: #e1f6ef; }
+.upcoming-recurring-item.is-expense .upcoming-recurring-icon { color: #c85454; background: #fdecec; }
+.upcoming-recurring-icon svg { width: 17px; }
+.upcoming-recurring-main { min-width: 0; display: grid; gap: 3px; }
+.upcoming-recurring-main strong { overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming-recurring-main small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.upcoming-recurring-value { display: grid; justify-items: end; gap: 4px; min-width: 168px; text-align: right; }
+.upcoming-recurring-value > strong { color: var(--ink); font-size: 13px; }
+.schedule-badge, .due-badge { padding: 4px 6px; border-radius: 4px; color: #4f6a61; background: #edf5f1; font-size: 9px; font-weight: 800; }
+.due-badge { color: #9d640a; background: #fff1d1; }
+.upcoming-recurring-empty { grid-template-columns: 36px minmax(0, 1fr); }
 
 .logout-link {
   width: 100%; border: 0; color: #dcebe6; background: transparent; text-align: left;
@@ -540,6 +556,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .transactions-panel { grid-column: auto; }
   .insights-panel { grid-column: auto; }
   .unusual-expenses-panel { grid-column: auto; }
+  .upcoming-recurring-panel { grid-column: auto; }
   .insight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wallet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -565,6 +582,8 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .insight-list { grid-template-columns: 1fr; }
   .unusual-expense-item { grid-template-columns: 1fr; }
   .unusual-expense-value { justify-items: start; min-width: 0; text-align: left; }
+  .upcoming-recurring-item { grid-template-columns: 36px minmax(0, 1fr); }
+  .upcoming-recurring-value { grid-column: 2; justify-items: start; min-width: 0; text-align: left; }
   .budget-content { align-items: flex-start; }
   .budget-ring { width: 110px; height: 110px; }
   .budget-ring::before { width: 80px; height: 80px; }
