@@ -349,6 +349,8 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .type-toggle label.active-expense { color: #b54848; border-color: #edc2c2; background: #fff3f3; }
 .type-toggle label.active-income { color: #087b61; border-color: #afe3d2; background: #effaf6; }
 .content-state { min-height: 330px; display: grid; place-items: center; align-content: center; gap: 10px; padding: 34px; border: 1px dashed #cbdcd5; border-radius: 8px; color: var(--muted); background: #fff; text-align: center; }
+.route-loading { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 10px; color: var(--muted); background: #f5faf8; font-size: 13px; }
+.route-loading svg { width: 28px; color: var(--green-600); }
 .content-state > svg { width: 34px; color: var(--green-600); }
 .content-state strong { color: var(--ink); font-size: 17px; }
 .content-state p { max-width: 420px; margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
