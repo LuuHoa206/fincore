@@ -7,6 +7,8 @@ export type Transaction = {
   id: string
   walletId: string
   walletName: string
+  counterpartyWalletId: string | null
+  counterpartyWalletName: string | null
   categoryId: string | null
   categoryName: string | null
   categoryIcon: string | null
@@ -33,8 +35,17 @@ export type CreateTransactionInput = {
   applyAllocationRule?: boolean
 }
 
+export type CreateWalletTransferInput = {
+  sourceWalletId: string
+  destinationWalletId: string
+  amount: number
+  description: string
+  notes?: string
+  occurredAt: string
+}
+
 export type TransactionListParams = {
-  transactionType?: 'INCOME' | 'EXPENSE'
+  transactionType?: 'INCOME' | 'EXPENSE' | 'TRANSFER'
   query?: string
   page?: number
   size?: number

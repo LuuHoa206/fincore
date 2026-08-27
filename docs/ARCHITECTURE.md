@@ -73,6 +73,10 @@ hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
 
 - Tat ca thay doi so du vi duoc thuc hien trong `@Transactional` service.
 - Thu/chi tao mot giao dich va hai but toan so cai can bang trong cung transaction.
+- Chuyen tien noi bo tao mot `TRANSFER` va hai but toan vi doi ung, mot am tai
+  vi nguon va mot duong tai vi dich. Hai vi phai cung tien te, duoc khoa theo
+  thu tu ID truoc khi kiem tra so du va cap nhat; vi vay tong tai san khong doi
+  va giam nguy co deadlock khi co hai lenh chuyen nguoc chieu cung luc.
 - Vi khong cho phep am se tu choi khoan chi vuot so du truoc khi ghi du lieu.
 - Giao dich da ghi nhan khong bi xoa; hoan tac tao giao dich doi ung de giu lich su doi soat.
 - API nhan `Idempotency-Key` de mot lan gui lai cung request khong ghi nhan lai giao dich.

@@ -1,5 +1,5 @@
 import { httpClient } from '../../shared/api/httpClient'
-import type { CreateTransactionInput, Transaction, TransactionListParams, TransactionPage } from './transactionTypes'
+import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionListParams, TransactionPage } from './transactionTypes'
 
 export const transactionApi = {
   list: async (params: TransactionListParams = {}) => {
@@ -8,6 +8,12 @@ export const transactionApi = {
   },
   create: async (input: CreateTransactionInput, idempotencyKey: string) => {
     const { data } = await httpClient.post<Transaction>('/transactions', input, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    })
+    return data
+  },
+  transfer: async (input: CreateWalletTransferInput, idempotencyKey: string) => {
+    const { data } = await httpClient.post<Transaction>('/transactions/transfers', input, {
       headers: { 'Idempotency-Key': idempotencyKey },
     })
     return data

@@ -10,6 +10,8 @@ public record TransactionResponse(
         UUID id,
         UUID walletId,
         String walletName,
+        UUID counterpartyWalletId,
+        String counterpartyWalletName,
         UUID categoryId,
         String categoryName,
         String categoryIcon,
@@ -25,12 +27,18 @@ public record TransactionResponse(
         UUID reversedTransactionId) {
 
     static TransactionResponse from(FinancialTransaction transaction, Wallet wallet) {
+        return from(transaction, wallet, null);
+    }
+
+    static TransactionResponse from(FinancialTransaction transaction, Wallet wallet, Wallet counterpartyWallet) {
         FinancialTransaction reversedTransaction = transaction.getReversedTransaction();
         var category = transaction.getCategory();
         return new TransactionResponse(
                 transaction.getId(),
                 wallet.getId(),
                 wallet.getName(),
+                counterpartyWallet == null ? null : counterpartyWallet.getId(),
+                counterpartyWallet == null ? null : counterpartyWallet.getName(),
                 category == null ? null : category.getId(),
                 category == null ? null : category.getName(),
                 category == null ? null : category.getIcon(),

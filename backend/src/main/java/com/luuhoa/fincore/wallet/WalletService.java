@@ -55,6 +55,35 @@ public class WalletService {
                 .orElseThrow(() -> new ResourceNotFoundException("WALLET_NOT_FOUND", "Wallet was not found"));
     }
 
+    /**
+     * Locks the two selected rows in database order so simultaneous transfers
+     * cannot deadlock by locking source and destination in opposite directions.
+     */
+    @Transactional
+    public WalletTransferPair lockOwnedWalletsForTransfer(UUID userId, UUID sourceWalletId, UUID destinationWalletId) {
+        if (sourceWalletId.equals(destinationWalletId)) {
+            throw new IllegalArgumentException("Source and destination wallets must be different");
+        }
+        List<Wallet> wallets = walletRepository.findOwnedActiveByIdsForUpdate(
+                userId,
+                List.of(sourceWalletId, destinationWalletId));
+        if (wallets.size() != 2) {
+            throw new ResourceNotFoundException("WALLET_NOT_FOUND", "One or both wallets were not found");
+        }
+        Wallet source = wallets.stream()
+                .filter(wallet -> wallet.getId().equals(sourceWalletId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("WALLET_NOT_FOUND", "Source wallet was not found"));
+        Wallet destination = wallets.stream()
+                .filter(wallet -> wallet.getId().equals(destinationWalletId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("WALLET_NOT_FOUND", "Destination wallet was not found"));
+        if (!source.getCurrency().equals(destination.getCurrency())) {
+            throw new ConflictException("WALLET_CURRENCY_MISMATCH", "Wallets must use the same currency for an internal transfer");
+        }
+        return new WalletTransferPair(source, destination);
+    }
+
     @Transactional(readOnly = true)
     public Wallet requireOwnedActiveWallet(UUID userId, UUID walletId) {
         return requireOwnedWallet(userId, walletId);
