@@ -77,6 +77,14 @@ nguoi dung va ky bao cao cho `FinancialInsightService`; service nay dung
 giai thich duoc tu du lieu da ghi nhan. No khong tu dong sua giao dich, ngan
 sach hay muc tieu, va khong tu nhan la du bao tai chinh.
 
+Luong `GET /api/v1/reports/dashboard/unusual-expenses` cung chi doc va giu
+dung ranh gioi 3 layer. `DashboardController` chi chuyen user va ky bao cao cho
+`ExpenseAnomalyDetectionService`. Service lay timezone cua user, goi public
+`TransactionReportingService` de lay khoan chi thang hien tai va baseline ba
+thang truoc theo danh muc/tien te. Controller khong inject repository, va
+reporting module khong thay doi giao dich. Ket qua chi la goi y ra soat co ly do
+cu the, khong phai ket luan gian lan.
+
 ## Quy tac du lieu va transaction
 
 - Tat ca thay doi so du vi duoc thuc hien trong `@Transactional` service.

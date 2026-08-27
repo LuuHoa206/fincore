@@ -37,6 +37,9 @@ class DashboardControllerWebTest {
     @MockitoBean
     private FinancialInsightService financialInsightService;
 
+    @MockitoBean
+    private ExpenseAnomalyDetectionService expenseAnomalyDetectionService;
+
     @Test
     void returnsMonthlyInsightsOnlyForTheAuthenticatedUser() throws Exception {
         UUID userId = UUID.randomUUID();
@@ -68,5 +71,44 @@ class DashboardControllerWebTest {
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(financialInsightService);
+    }
+
+    @Test
+    void returnsUnusualExpensesOnlyForTheAuthenticatedUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(expenseAnomalyDetectionService.findUnusualExpenses(userId, "2026-08"))
+                .thenReturn(new UnusualExpensesResponse(
+                        YearMonth.of(2026, 8),
+                        "Asia/Ho_Chi_Minh",
+                        List.of(new UnusualExpense(
+                                UUID.randomUUID(),
+                                "Bảo dưỡng xe",
+                                "Di chuyển",
+                                "VND",
+                                new BigDecimal("1500000"),
+                                new BigDecimal("200000"),
+                                3,
+                                new BigDecimal("7.5"),
+                                ExpenseAnomalySeverity.HIGH,
+                                "Khoản chi này cao gấp 7.5 lần mức trung bình của 3 khoản chi trước đó cùng danh mục.",
+                                java.time.Instant.parse("2026-08-15T03:00:00Z")))));
+
+        mockMvc.perform(get("/api/v1/reports/dashboard/unusual-expenses")
+                        .with(jwt().jwt(token -> token.subject(userId.toString())))
+                        .queryParam("period", "2026-08"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.period").value("2026-08"))
+                .andExpect(jsonPath("$.findings[0].severity").value("HIGH"))
+                .andExpect(jsonPath("$.findings[0].historicalTransactionCount").value(3));
+
+        verify(expenseAnomalyDetectionService).findUnusualExpenses(eq(userId), eq("2026-08"));
+    }
+
+    @Test
+    void protectsUnusualExpenseReviewLikeEveryOtherFinancialEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/reports/dashboard/unusual-expenses"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(expenseAnomalyDetectionService);
     }
 }

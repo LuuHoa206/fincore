@@ -3,6 +3,7 @@ package com.luuhoa.fincore.transaction;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -63,6 +64,45 @@ public class TransactionReportingService {
         return Map.copyOf(totals);
     }
 
+    @Transactional(readOnly = true)
+    public List<ExpenseCandidate> postedExpenseCandidates(UUID userId, Instant periodStart, Instant periodEnd) {
+        return transactionRepository.findExpenseCandidates(
+                userId,
+                TransactionType.EXPENSE,
+                TransactionStatus.POSTED,
+                periodStart,
+                periodEnd).stream()
+                .map(candidate -> new ExpenseCandidate(
+                        candidate.getTransactionId(),
+                        candidate.getCategoryId(),
+                        candidate.getCategoryName(),
+                        candidate.getCurrency(),
+                        safeAmount(candidate.getAmount()),
+                        candidate.getDescription(),
+                        candidate.getOccurredAt()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<CategoryCurrency, HistoricalExpenseBaseline> postedExpenseBaselines(
+            UUID userId,
+            Instant periodStart,
+            Instant periodEnd) {
+        Map<CategoryCurrency, HistoricalExpenseBaseline> baselines = new LinkedHashMap<>();
+        transactionRepository.summarizeHistoricalExpenseTotals(
+                userId,
+                TransactionType.EXPENSE,
+                TransactionStatus.POSTED,
+                periodStart,
+                periodEnd).forEach(total -> {
+                    CategoryCurrency key = new CategoryCurrency(total.getCategoryId(), total.getCurrency());
+                    baselines.put(key, new HistoricalExpenseBaseline(
+                            safeAmount(total.getTotalAmount()),
+                            total.getTransactionCount()));
+                });
+        return Map.copyOf(baselines);
+    }
+
     public record CurrencyCashFlow(
             String currency,
             BigDecimal incomeAmount,
@@ -82,8 +122,25 @@ public class TransactionReportingService {
             return new CurrencyCashFlow(currency, incomeAmount, incomeCount, safeAmount(amount), count);
         }
 
-        private static BigDecimal safeAmount(BigDecimal amount) {
-            return amount == null ? BigDecimal.ZERO : amount;
-        }
+    }
+
+    public record ExpenseCandidate(
+            UUID transactionId,
+            UUID categoryId,
+            String categoryName,
+            String currency,
+            BigDecimal amount,
+            String description,
+            Instant occurredAt) {
+    }
+
+    public record CategoryCurrency(UUID categoryId, String currency) {
+    }
+
+    public record HistoricalExpenseBaseline(BigDecimal totalAmount, long transactionCount) {
+    }
+
+    private static BigDecimal safeAmount(BigDecimal amount) {
+        return amount == null ? BigDecimal.ZERO : amount;
     }
 }

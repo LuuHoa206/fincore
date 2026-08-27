@@ -14,6 +14,7 @@
 10. Cập nhật số dư, hũ, ngân sách, audit và outbox phải cùng transaction.
 11. Mọi dữ liệu truy vấn phải được giới hạn theo chủ sở hữu.
 12. AI chỉ tạo đề xuất; người dùng xác nhận trước khi dữ liệu thay đổi.
+13. Phát hiện khoản chi cần xem lại chỉ đọc các giao dịch `POSTED`, luôn giới hạn theo chủ sở hữu, danh mục và loại tiền; hệ thống không tự đổi dữ liệu hoặc kết luận gian lận.
 
 ## Ví dụ
 

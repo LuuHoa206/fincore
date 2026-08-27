@@ -39,3 +39,25 @@ export type MonthlyFinancialInsights = {
   timeZone: string
   insights: FinancialInsight[]
 }
+
+export type ExpenseAnomalySeverity = 'MEDIUM' | 'HIGH'
+
+export type UnusualExpense = {
+  transactionId: string
+  description: string
+  categoryName: string
+  currency: string
+  amount: number
+  historicalAverageAmount: number
+  historicalTransactionCount: number
+  multipleOfAverage: number
+  severity: ExpenseAnomalySeverity
+  reason: string
+  occurredAt: string
+}
+
+export type UnusualExpensesReport = {
+  period: string
+  timeZone: string
+  findings: UnusualExpense[]
+}

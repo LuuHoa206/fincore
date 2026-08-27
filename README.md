@@ -125,3 +125,9 @@ The dashboard also provides transparent monthly observations from posted cash
 flow, budget status, and saving-goal progress. These observations are read-only
 and explainable; they help users review recorded data rather than predict or
 alter financial outcomes.
+
+The dashboard can also flag expenses worth reviewing with a transparent,
+read-only rule. A posted expense is shown only when at least three earlier
+posted expenses exist in the same category and currency during the prior three
+months, and the current amount is at least 2.5 times that historical average.
+This is a review prompt, not a fraud decision, prediction, or automatic change.
