@@ -17,16 +17,19 @@ public class DashboardController {
     private final FinancialInsightService financialInsightService;
     private final ExpenseAnomalyDetectionService expenseAnomalyDetectionService;
     private final CashFlowForecastService cashFlowForecastService;
+    private final CashFlowTrendService cashFlowTrendService;
 
     public DashboardController(
             DashboardService dashboardService,
             FinancialInsightService financialInsightService,
             ExpenseAnomalyDetectionService expenseAnomalyDetectionService,
-            CashFlowForecastService cashFlowForecastService) {
+            CashFlowForecastService cashFlowForecastService,
+            CashFlowTrendService cashFlowTrendService) {
         this.dashboardService = dashboardService;
         this.financialInsightService = financialInsightService;
         this.expenseAnomalyDetectionService = expenseAnomalyDetectionService;
         this.cashFlowForecastService = cashFlowForecastService;
+        this.cashFlowTrendService = cashFlowTrendService;
     }
 
     @GetMapping
@@ -55,5 +58,12 @@ public class DashboardController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) Integer days) {
         return cashFlowForecastService.forecast(UUID.fromString(jwt.getSubject()), days);
+    }
+
+    @GetMapping("/cash-flow-trend")
+    CashFlowTrendResponse getCashFlowTrend(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Integer months) {
+        return cashFlowTrendService.trend(UUID.fromString(jwt.getSubject()), months);
     }
 }

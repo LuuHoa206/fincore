@@ -89,3 +89,21 @@ export type CashFlowForecast = {
   currencySummaries: CashFlowForecastCurrencySummary[]
   upcomingOccurrences: CashFlowForecastOccurrence[]
 }
+
+export type MonthlyCashFlowTrendPoint = {
+  period: string
+  income: number
+  expense: number
+  net: number
+}
+
+export type CashFlowTrendCurrency = {
+  currency: string
+  points: MonthlyCashFlowTrendPoint[]
+}
+
+export type CashFlowTrend = {
+  months: number
+  timeZone: string
+  currencySeries: CashFlowTrendCurrency[]
+}
