@@ -118,6 +118,10 @@ cu the, khong phai ket luan gian lan.
   khac nhau khi chua co ty gia quy doi.
 - Lich su giao dich loc va phan trang tai database; client chi gui dieu kien va
   trang can xem, khong tai toan bo lich su roi loc tai trinh duyet.
+- Xuat CSV van nam trong module `transaction`. `TransactionCsvExportService`
+  ap dung cung bo loc va owner scope nhu lich su giao dich, doc ledger theo lo
+  de lay ten vi thay vi truy van tung dong. Export la read-only, dung mui gio
+  cua nguoi dung va tu choi request vuot 10.000 dong de tranh cat ngam du lieu.
 - Quy tac giao dich dinh ky thuoc module `recurring`, co controller, service va
   repository rieng. Scheduler chi goi public service cua module nay; khi can ghi
   giao dich, `RecurringRuleExecutionService` goi `TransactionService` thay vi

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -71,6 +71,23 @@ export function TransactionsPage() {
     },
     onError: (error) => setActionError(getApiErrorMessage(error, 'Không thể hoàn tác giao dịch.')),
   })
+  const exportMutation = useMutation({
+    mutationFn: () => transactionApi.exportCsv({
+      transactionType: filter === 'ALL' ? undefined : filter,
+      query: query.trim() || undefined,
+    }),
+    onSuccess: ({ blob, fileName }) => {
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(objectUrl)
+    },
+    onError: (error) => setActionError(getApiErrorMessage(error, 'Không thể xuất lịch sử giao dịch.')),
+  })
 
   const visibleTransactions = transactionsQuery.data?.content ?? []
   const totalTransactions = transactionsQuery.data?.totalElements ?? 0
@@ -83,6 +100,7 @@ export function TransactionsPage() {
     <header className="topbar transaction-topbar">
       <div><p className="eyebrow">DÒNG TIỀN HẰNG NGÀY</p><h1>Giao dịch</h1><p className="page-subtitle">Ghi nhận thu nhập và chi tiêu theo từng ví. Số dư được cập nhật ngay sau khi giao dịch được tạo.</p></div>
       <div className="transaction-actions">
+        <button className="secondary-button" disabled={!totalTransactions || exportMutation.isPending} onClick={() => exportMutation.mutate()} title="Xuất toàn bộ giao dịch theo bộ lọc hiện tại, không chỉ trang đang xem"><Download /> {exportMutation.isPending ? 'Đang xuất...' : 'Xuất CSV'}</button>
         <button className="secondary-button" disabled={!canTransfer} onClick={() => setTransferFormOpen(true)} title={canTransfer ? 'Chuyển tiền giữa hai ví cùng loại tiền tệ' : 'Cần ít nhất hai ví cùng tiền tệ'}><ArrowLeftRight /> Chuyển tiền</button>
         <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
       </div>

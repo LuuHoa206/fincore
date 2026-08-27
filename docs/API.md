@@ -2,7 +2,8 @@
 
 Base path: `/api/v1`
 
-All request and response bodies use JSON. Protected endpoints require:
+All request and response bodies use JSON unless an endpoint explicitly returns
+a downloadable file. Protected endpoints require:
 
 ```http
 Authorization: Bearer <access-token>
@@ -375,6 +376,18 @@ searches the description, notes, and category name. `from` and `to` accept ISO
 The response is a page object containing `content`, `page`, `size`,
 `totalElements`, and `totalPages`. Queries are owner-scoped and run at the
 database layer before the response is created.
+
+### Export transaction history as CSV
+
+`GET /transactions/export?transactionType=EXPENSE&query=coffee&from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z`
+
+Returns a `text/csv` attachment containing every transaction matching the same
+owner-scoped filters as the list endpoint, not only the page currently shown in
+the client. The file is UTF-8 with a BOM so Vietnamese text opens correctly in
+spreadsheet applications. Timestamps use the authenticated user's configured
+time zone. To protect the API from an unexpectedly large download, exports are
+limited to 10,000 rows; a wider request returns `409` with
+`TRANSACTION_EXPORT_LIMIT_EXCEEDED` and must be narrowed first.
 
 ### Record income or expense
 

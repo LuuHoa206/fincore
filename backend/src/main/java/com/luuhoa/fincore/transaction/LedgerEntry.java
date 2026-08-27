@@ -77,6 +77,7 @@ public class LedgerEntry {
     }
 
     public Wallet getWallet() { return wallet; }
+    public FinancialTransaction getTransaction() { return transaction; }
     public BigDecimal getSignedAmount() { return signedAmount; }
     public AccountKind getAccountKind() { return accountKind; }
 }

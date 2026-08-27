@@ -1,10 +1,16 @@
 package com.luuhoa.fincore.transaction;
 
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -38,6 +44,9 @@ class TransactionControllerWebTest {
     @MockitoBean
     private TransactionService transactionService;
 
+    @MockitoBean
+    private TransactionCsvExportService transactionCsvExportService;
+
     @Test
     void rejectsAnUnauthenticatedFinancialWrite() throws Exception {
         mockMvc.perform(post("/api/v1/transactions")
@@ -47,6 +56,31 @@ class TransactionControllerWebTest {
                 .andExpect(header().exists("X-Correlation-Id"));
 
         verifyNoInteractions(transactionService);
+    }
+
+    @Test
+    void rejectsAnUnauthenticatedTransactionExport() throws Exception {
+        mockMvc.perform(get("/api/v1/transactions/export"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().exists("X-Correlation-Id"));
+
+        verifyNoInteractions(transactionService, transactionCsvExportService);
+    }
+
+    @Test
+    void exportsOnlyTheAuthenticatedUsersFilteredTransactionHistory() throws Exception {
+        UUID userId = UUID.randomUUID();
+        byte[] csv = "\uFEFFMã giao dịch\r\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        when(transactionCsvExportService.export(eq(userId), isNull(), isNull(), isNull(), isNull())).thenReturn(csv);
+
+        mockMvc.perform(get("/api/v1/transactions/export")
+                        .with(jwt().jwt(token -> token.subject(userId.toString()))))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, org.hamcrest.Matchers.startsWith("text/csv")))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.containsString("attachment")))
+                .andExpect(content().bytes(csv));
+
+        verify(transactionCsvExportService).export(userId, null, null, null, null);
     }
 
     @Test

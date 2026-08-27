@@ -161,3 +161,8 @@ read-only rule. A posted expense is shown only when at least three earlier
 posted expenses exist in the same category and currency during the prior three
 months, and the current amount is at least 2.5 times that historical average.
 This is a review prompt, not a fraud decision, prediction, or automatic change.
+
+Transaction history can be exported as a Vietnamese Excel-friendly CSV using
+the active server-side filters. Export remains owner-scoped and read-only, uses
+the user's time zone for timestamps, and rejects requests above 10,000 rows
+instead of silently producing a partial file.

@@ -47,6 +47,8 @@ export type CreateWalletTransferInput = {
 export type TransactionListParams = {
   transactionType?: 'INCOME' | 'EXPENSE' | 'TRANSFER'
   query?: string
+  from?: string
+  to?: string
   page?: number
   size?: number
 }
