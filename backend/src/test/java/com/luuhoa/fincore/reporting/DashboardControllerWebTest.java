@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,39 @@ class DashboardControllerWebTest {
 
     @MockitoBean
     private ExpenseAnomalyDetectionService expenseAnomalyDetectionService;
+
+    @MockitoBean
+    private CashFlowForecastService cashFlowForecastService;
+
+    @Test
+    void returnsCashFlowForecastOnlyForTheAuthenticatedUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(cashFlowForecastService.forecast(userId, 30)).thenReturn(new CashFlowForecastResponse(
+                Instant.parse("2026-08-01T00:00:00Z"),
+                Instant.parse("2026-08-31T00:00:00Z"),
+                30,
+                "Asia/Ho_Chi_Minh",
+                List.of(new CashFlowForecastCurrencySummary(
+                        "VND", new BigDecimal("10000000"), new BigDecimal("3000000"), new BigDecimal("7000000"))),
+                List.of()));
+
+        mockMvc.perform(get("/api/v1/reports/dashboard/cash-flow-forecast")
+                        .with(jwt().jwt(token -> token.subject(userId.toString())))
+                        .queryParam("days", "30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days").value(30))
+                .andExpect(jsonPath("$.currencySummaries[0].projectedNet").value(7000000));
+
+        verify(cashFlowForecastService).forecast(eq(userId), eq(30));
+    }
+
+    @Test
+    void protectsCashFlowForecastLikeEveryOtherFinancialEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/reports/dashboard/cash-flow-forecast"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(cashFlowForecastService);
+    }
 
     @Test
     void returnsMonthlyInsightsOnlyForTheAuthenticatedUser() throws Exception {

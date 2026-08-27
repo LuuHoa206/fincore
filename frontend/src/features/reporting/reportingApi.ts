@@ -1,5 +1,5 @@
 import { httpClient } from '../../shared/api/httpClient'
-import type { DashboardReport, MonthlyFinancialInsights, UnusualExpensesReport } from './reportingTypes'
+import type { CashFlowForecast, DashboardReport, MonthlyFinancialInsights, UnusualExpensesReport } from './reportingTypes'
 
 export const reportingApi = {
   dashboard: async (period?: string) => {
@@ -18,6 +18,10 @@ export const reportingApi = {
     const { data } = await httpClient.get<UnusualExpensesReport>('/reports/dashboard/unusual-expenses', {
       params: period ? { period } : undefined,
     })
+    return data
+  },
+  cashFlowForecast: async (days = 30) => {
+    const { data } = await httpClient.get<CashFlowForecast>('/reports/dashboard/cash-flow-forecast', { params: { days } })
     return data
   },
 }

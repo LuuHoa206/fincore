@@ -16,14 +16,17 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final FinancialInsightService financialInsightService;
     private final ExpenseAnomalyDetectionService expenseAnomalyDetectionService;
+    private final CashFlowForecastService cashFlowForecastService;
 
     public DashboardController(
             DashboardService dashboardService,
             FinancialInsightService financialInsightService,
-            ExpenseAnomalyDetectionService expenseAnomalyDetectionService) {
+            ExpenseAnomalyDetectionService expenseAnomalyDetectionService,
+            CashFlowForecastService cashFlowForecastService) {
         this.dashboardService = dashboardService;
         this.financialInsightService = financialInsightService;
         this.expenseAnomalyDetectionService = expenseAnomalyDetectionService;
+        this.cashFlowForecastService = cashFlowForecastService;
     }
 
     @GetMapping
@@ -45,5 +48,12 @@ public class DashboardController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) String period) {
         return expenseAnomalyDetectionService.findUnusualExpenses(UUID.fromString(jwt.getSubject()), period);
+    }
+
+    @GetMapping("/cash-flow-forecast")
+    CashFlowForecastResponse getCashFlowForecast(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Integer days) {
+        return cashFlowForecastService.forecast(UUID.fromString(jwt.getSubject()), days);
     }
 }
