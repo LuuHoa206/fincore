@@ -10,6 +10,7 @@ import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { RegisterPage } from './features/auth/RegisterPage'
 import { WalletsPage } from './features/wallets/WalletsPage'
 import { TransactionsPage } from './features/transactions/TransactionsPage'
+import { RecurringRulesPage } from './features/recurring/RecurringRulesPage'
 import { AppLayout } from './layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import './App.css'
@@ -30,6 +31,7 @@ function App() {
             <Route path="jars" element={<MoneyJarsPage />} />
             <Route path="allocation-rules" element={<AllocationRulesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="recurring" element={<RecurringRulesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
