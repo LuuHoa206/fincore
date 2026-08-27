@@ -98,6 +98,17 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
     }
 
+    @Transactional
+    public UserResponse updateProfile(java.util.UUID userId, UpdateProfileRequest request) {
+        UserAccount user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+        user.updateProfile(
+                request.displayName().trim(),
+                normalizeCurrency(request.preferredCurrency()),
+                normalizeTimeZone(request.timeZone()));
+        return UserResponse.from(user);
+    }
+
     private AuthResponse issueTokenPair(UserAccount user) {
         RefreshTokenService.IssuedRefreshToken refresh = refreshTokenService.issue(user);
         return response(user, refresh.value());

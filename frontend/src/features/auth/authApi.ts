@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { API_BASE_URL, httpClient } from '../../shared/api/httpClient'
-import type { AuthResponse, LoginInput, RegisterInput, UserProfile } from './authTypes'
+import type { AuthResponse, LoginInput, RegisterInput, UpdateProfileInput, UserProfile } from './authTypes'
 
 let sessionRestorePromise: Promise<AuthResponse> | null = null
 
@@ -31,6 +31,10 @@ export const authApi = {
   },
   me: async () => {
     const { data } = await httpClient.get<UserProfile>('/users/me')
+    return data
+  },
+  updateProfile: async (input: UpdateProfileInput) => {
+    const { data } = await httpClient.put<UserProfile>('/users/me', input)
     return data
   },
 }

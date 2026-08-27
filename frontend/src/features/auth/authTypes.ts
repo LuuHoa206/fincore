@@ -26,3 +26,9 @@ export type RegisterInput = LoginInput & {
   preferredCurrency: string
   timeZone: string
 }
+
+export type UpdateProfileInput = {
+  displayName: string
+  preferredCurrency: string
+  timeZone: string
+}
