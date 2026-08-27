@@ -124,6 +124,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 - [Financial rules](docs/FINANCIAL_RULES.md)
 - [API contract](docs/API.md)
 - [Operations guide](docs/OPERATIONS.md)
+- [Performance testing](docs/PERFORMANCE_TESTING.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Git workflow](docs/GIT_WORKFLOW.md)
 

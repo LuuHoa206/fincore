@@ -16,3 +16,5 @@ frontend/*.local
 
 coverage/
 reports/
+performance/results/*
+!performance/results/.gitkeep
