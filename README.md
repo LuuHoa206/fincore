@@ -62,6 +62,30 @@ npm run dev
 The frontend runs at `http://localhost:5173`; the backend runs at
 `http://localhost:8080`.
 
+## Verification
+
+Run the fast backend suite and frontend checks before opening a pull request:
+
+```powershell
+cd backend
+.\mvnw.cmd test
+
+cd ..\frontend
+npm run lint
+npm run build
+```
+
+With Docker Desktop available, run the PostgreSQL/Flyway integration suite as
+well. It boots a disposable PostgreSQL container and verifies the current
+schema, including split-bill tables:
+
+```powershell
+cd backend
+$env:RUN_INTEGRATION_TESTS = 'true'
+.\mvnw.cmd test
+Remove-Item Env:RUN_INTEGRATION_TESTS
+```
+
 ## Documentation
 
 - [Product scope](docs/PRODUCT_SCOPE.md)

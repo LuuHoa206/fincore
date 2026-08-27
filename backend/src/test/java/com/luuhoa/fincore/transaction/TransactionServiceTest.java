@@ -83,7 +83,7 @@ class TransactionServiceTest {
                 Instant.parse("2026-08-26T09:00:00Z"),
                 false);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
         when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME)).thenReturn(category);
 
@@ -116,7 +116,7 @@ class TransactionServiceTest {
                 Instant.now(),
                 false);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
         when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.EXPENSE)).thenReturn(category);
 
@@ -142,7 +142,7 @@ class TransactionServiceTest {
                 Instant.parse("2026-08-26T09:00:00Z"), true);
         IncomeAllocationPlan plan = new IncomeAllocationPlan(wallet, List.of(), List.of(), BigDecimal.ZERO);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
         when(allocationRuleService.prepareIncomeAllocation(userId, walletId, request.amount())).thenReturn(plan);
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME)).thenReturn(category);
 
@@ -153,6 +153,38 @@ class TransactionServiceTest {
         verify(ledgerEntryRepository).saveAll(any());
         verify(allocationRuleService).applyIncomeAllocation(org.mockito.ArgumentMatchers.eq(plan), org.mockito.ArgumentMatchers.any(FinancialTransaction.class));
         verify(walletService, never()).requireOwnedWalletForTransaction(userId, walletId);
+    }
+
+    @Test
+    void returnsTheExistingTransactionWhenTheSameKeyAppearsAfterTheFinancialWriteLock() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UUID categoryId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        String idempotencyKey = "income-duplicate-after-lock";
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Category category = new Category(user, "Salary", CategoryType.INCOME, "banknote", "#0F8F72");
+        FinancialTransaction existing = new FinancialTransaction(
+                user, category, TransactionType.INCOME, new BigDecimal("500000"), "VND", "Salary", null, Instant.now(), idempotencyKey);
+        setId(existing, transactionId);
+        LedgerEntry existingEntry = LedgerEntry.walletEntry(existing, wallet, new BigDecimal("500000"));
+        CreateTransactionRequest request = new CreateTransactionRequest(
+                walletId, categoryId, TransactionType.INCOME, new BigDecimal("500000"), "Salary", null, Instant.now(), false);
+
+        when(transactionRepository.findByUserIdAndIdempotencyKey(userId, idempotencyKey))
+                .thenReturn(Optional.empty(), Optional.of(existing));
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
+        when(ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET))
+                .thenReturn(List.of(existingEntry));
+
+        TransactionResponse response = service.create(userId, request, idempotencyKey);
+
+        assertThat(response.id()).isEqualTo(transactionId);
+        verify(walletService, never()).requireOwnedWalletForTransaction(userId, walletId);
+        verify(categoryService, never()).requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME);
+        verify(transactionRepository, never()).save(any(FinancialTransaction.class));
+        verify(ledgerEntryRepository, never()).saveAll(any());
     }
 
     @Test
@@ -200,7 +232,7 @@ class TransactionServiceTest {
                 "Cuối ngày",
                 Instant.parse("2026-08-27T10:30:00Z"));
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
         when(walletService.lockOwnedWalletsForTransfer(userId, sourceWalletId, destinationWalletId))
                 .thenReturn(new WalletTransferPair(source, destination));
 

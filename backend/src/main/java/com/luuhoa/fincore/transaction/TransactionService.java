@@ -106,20 +106,20 @@ public class TransactionService {
     @Transactional
     public TransactionResponse create(UUID userId, CreateTransactionRequest request, String idempotencyKey) {
         String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
-        if (normalizedKey != null) {
-            FinancialTransaction existing = transactionRepository.findByUserIdAndIdempotencyKey(userId, normalizedKey)
-                    .orElse(null);
-            if (existing != null) {
-                return toResponse(existing);
-            }
+        TransactionResponse existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
         }
 
         if (request.transactionType() != TransactionType.INCOME && request.transactionType() != TransactionType.EXPENSE) {
             throw new IllegalArgumentException("Only INCOME and EXPENSE are supported when recording a transaction");
         }
 
-        UserAccount user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+        UserAccount user = lockUserForFinancialWrite(userId);
+        existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
+        }
         boolean applyAllocationRule = request.transactionType() == TransactionType.INCOME
                 && Boolean.TRUE.equals(request.applyAllocationRule());
         IncomeAllocationPlan allocationPlan = applyAllocationRule
@@ -160,14 +160,16 @@ public class TransactionService {
     @Transactional
     public TransactionResponse createTransfer(UUID userId, CreateWalletTransferRequest request, String idempotencyKey) {
         String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
-        if (normalizedKey != null) {
-            FinancialTransaction existing = transactionRepository.findByUserIdAndIdempotencyKey(userId, normalizedKey)
-                    .orElse(null);
-            if (existing != null) {
-                return toResponse(existing);
-            }
+        TransactionResponse existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
         }
 
+        UserAccount user = lockUserForFinancialWrite(userId);
+        existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
+        }
         WalletTransferPair wallets = walletService.lockOwnedWalletsForTransfer(
                 userId,
                 request.sourceWalletId(),
@@ -177,7 +179,7 @@ public class TransactionService {
         wallets.destination().applyBalance(amount);
 
         FinancialTransaction transfer = new FinancialTransaction(
-                requireUser(userId),
+                user,
                 null,
                 TransactionType.TRANSFER,
                 amount,
@@ -280,6 +282,25 @@ public class TransactionService {
     private UserAccount requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    /**
+     * A user-level row lock gives idempotency a single serialization point before
+     * a money-changing request locks individual wallets. This prevents two
+     * concurrent requests with the same key from creating two ledger postings.
+     */
+    private UserAccount lockUserForFinancialWrite(UUID userId) {
+        return userRepository.findByIdForFinancialWrite(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private TransactionResponse findExistingTransaction(UUID userId, String idempotencyKey) {
+        if (idempotencyKey == null) {
+            return null;
+        }
+        return transactionRepository.findByUserIdAndIdempotencyKey(userId, idempotencyKey)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     private BigDecimal validateAndNormalizeAmount(BigDecimal requestedAmount, String currencyCode) {
