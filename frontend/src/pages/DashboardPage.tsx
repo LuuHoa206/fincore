@@ -6,12 +6,13 @@ import { useAuth } from '../features/auth/authContextState'
 import { reportingApi } from '../features/reporting/reportingApi'
 import { formatCurrency, formatDateTime } from '../features/transactions/transactionFormatters'
 import type { Transaction } from '../features/transactions/transactionTypes'
-import type { FinancialInsight, FinancialInsightSeverity } from '../features/reporting/reportingTypes'
+import type { FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
 
 export function DashboardPage() {
   const { user } = useAuth()
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: () => reportingApi.dashboard() })
   const insightQuery = useQuery({ queryKey: ['monthly-insights'], queryFn: () => reportingApi.monthlyInsights() })
+  const unusualExpenseQuery = useQuery({ queryKey: ['unusual-expenses'], queryFn: () => reportingApi.unusualExpenses() })
   const report = dashboardQuery.data
   const preferredCurrency = user?.preferredCurrency ?? 'VND'
   const summary = report?.currencySummaries.find((item) => item.currency === preferredCurrency) ?? report?.currencySummaries[0]
@@ -52,6 +53,17 @@ export function DashboardPage() {
         </div>}
       </section>
 
+      <section className="panel unusual-expenses-panel">
+        <div className="section-heading"><div><p className="eyebrow">RÀ SOÁT CHI TIÊU</p><h2>Khoản chi cần xem lại</h2></div><CircleAlert className="unusual-expenses-heading-icon" /></div>
+        <p className="insights-caption">So sánh với các khoản chi trước đó cùng danh mục và loại tiền trong 3 tháng. Đây là gợi ý để rà soát, không phải kết luận giao dịch bất thường hay gian lận.</p>
+        {unusualExpenseQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang rà soát khoản chi</div>}
+        {unusualExpenseQuery.isError && <div className="form-alert" role="alert">Không thể tải các khoản chi cần xem lại. Hãy thử làm mới trang.</div>}
+        {!unusualExpenseQuery.isPending && !unusualExpenseQuery.isError && !unusualExpenseQuery.data?.findings.length && <div className="dashboard-empty unusual-expenses-empty"><CircleCheck /><span>Chưa có khoản chi nào cần xem lại</span><small>Cần ít nhất 3 khoản chi lịch sử cùng danh mục để hệ thống có cơ sở so sánh.</small></div>}
+        {!!unusualExpenseQuery.data?.findings.length && <div className="unusual-expense-list">
+          {unusualExpenseQuery.data.findings.map((finding) => <UnusualExpenseItem key={finding.transactionId} finding={finding} />)}
+        </div>}
+      </section>
+
       <section className="panel transactions-panel" id="transactions"><div className="section-heading"><div><p className="eyebrow">HOẠT ĐỘNG GẦN ĐÂY</p><h2>Giao dịch mới nhất</h2></div><Link className="text-button" to="/transactions">Xem tất cả <ChevronRight /></Link></div>
         {dashboardQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tải giao dịch</div>}
         {!dashboardQuery.isPending && !report?.recentTransactions.length && <div className="dashboard-empty"><ArrowUpRight /><span>Chưa có giao dịch nào</span><Link to="/transactions">Ghi nhận giao dịch đầu tiên</Link></div>}
@@ -73,6 +85,14 @@ function insightIcon(severity: FinancialInsightSeverity) {
   if (severity === 'SUCCESS') return <CircleCheck />
   if (severity === 'WARNING' || severity === 'DANGER') return <CircleAlert />
   return <Info />
+}
+
+function UnusualExpenseItem({ finding }: { finding: UnusualExpense }) {
+  const severityLabel = finding.severity === 'HIGH' ? 'Cần ưu tiên xem lại' : 'Nên xem lại'
+  return <article className={`unusual-expense-item is-${finding.severity.toLowerCase()}`}>
+    <div className="unusual-expense-main"><span className="unusual-expense-icon"><CircleAlert /></span><div><strong>{finding.description}</strong><small>{finding.categoryName} · {formatDateTime(finding.occurredAt)}</small><p>{finding.reason}</p></div></div>
+    <div className="unusual-expense-value"><span className={`severity-badge is-${finding.severity.toLowerCase()}`}>{severityLabel}</span><strong>{formatCurrency(finding.amount, finding.currency)}</strong><small>Trung bình trước đó: {formatCurrency(finding.historicalAverageAmount, finding.currency)}</small></div>
+  </article>
 }
 
 function SummaryCard({ className, label, icon, value, detail, pending }: { className: string; label: string; icon: ReactNode; value: string; detail: string; pending: boolean }) {

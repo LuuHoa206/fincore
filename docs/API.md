@@ -576,6 +576,22 @@ predict future financial outcomes.
 Each insight contains a stable `key`, `severity` (`INFO`, `SUCCESS`, `WARNING`,
 or `DANGER`), title, message, and the related currency/amount when applicable.
 
+### Review unusually large expenses
+
+`GET /reports/dashboard/unusual-expenses?period=2026-08`
+
+The optional `period` follows the dashboard `YYYY-MM` rule. The endpoint is
+read-only and only considers the authenticated user's `POSTED` expense
+transactions. For each expense in the requested month, it compares the amount
+with the average of expenses in the same category and currency during the three
+preceding months. A finding requires at least three historical transactions and
+an amount at least 2.5 times that average.
+
+The response contains the current amount, historical average, historical count,
+multiple, severity (`MEDIUM` or `HIGH`), and an explanatory reason. Findings
+are review prompts only: the endpoint never changes financial data and does not
+claim that a transaction is fraudulent.
+
 ## Error format
 
 Validation and business errors share one response shape:

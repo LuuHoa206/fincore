@@ -91,6 +91,51 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
             @Param("periodStart") Instant periodStart,
             @Param("periodEnd") Instant periodEnd);
 
+    @Query("""
+            select transaction.id as transactionId,
+                   category.id as categoryId,
+                   category.name as categoryName,
+                   transaction.currency as currency,
+                   transaction.amount as amount,
+                   transaction.description as description,
+                   transaction.occurredAt as occurredAt
+            from FinancialTransaction transaction
+            join transaction.category category
+            where transaction.user.id = :userId
+              and transaction.transactionType = :transactionType
+              and transaction.status = :status
+              and transaction.occurredAt >= :periodStart
+              and transaction.occurredAt < :periodEnd
+            order by transaction.occurredAt desc
+            """)
+    List<ExpenseTransactionCandidate> findExpenseCandidates(
+            @Param("userId") UUID userId,
+            @Param("transactionType") TransactionType transactionType,
+            @Param("status") TransactionStatus status,
+            @Param("periodStart") Instant periodStart,
+            @Param("periodEnd") Instant periodEnd);
+
+    @Query("""
+            select category.id as categoryId,
+                   transaction.currency as currency,
+                   coalesce(sum(transaction.amount), 0) as totalAmount,
+                   count(transaction.id) as transactionCount
+            from FinancialTransaction transaction
+            join transaction.category category
+            where transaction.user.id = :userId
+              and transaction.transactionType = :transactionType
+              and transaction.status = :status
+              and transaction.occurredAt >= :periodStart
+              and transaction.occurredAt < :periodEnd
+            group by category.id, transaction.currency
+            """)
+    List<HistoricalExpenseTotal> summarizeHistoricalExpenseTotals(
+            @Param("userId") UUID userId,
+            @Param("transactionType") TransactionType transactionType,
+            @Param("status") TransactionStatus status,
+            @Param("periodStart") Instant periodStart,
+            @Param("periodEnd") Instant periodEnd);
+
     interface CategoryExpenseTotal {
         UUID getCategoryId();
 
@@ -101,6 +146,32 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
         String getCurrency();
 
         TransactionType getTransactionType();
+
+        BigDecimal getTotalAmount();
+
+        long getTransactionCount();
+    }
+
+    interface ExpenseTransactionCandidate {
+        UUID getTransactionId();
+
+        UUID getCategoryId();
+
+        String getCategoryName();
+
+        String getCurrency();
+
+        BigDecimal getAmount();
+
+        String getDescription();
+
+        Instant getOccurredAt();
+    }
+
+    interface HistoricalExpenseTotal {
+        UUID getCategoryId();
+
+        String getCurrency();
 
         BigDecimal getTotalAmount();
 
