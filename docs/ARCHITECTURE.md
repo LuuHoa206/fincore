@@ -18,6 +18,7 @@ Spring Boot
    |-- transaction
    |-- moneyjar
    |-- allocationrule
+   |-- recurring
    |-- budget
    |-- savinggoal
    |-- reporting
@@ -102,6 +103,16 @@ hien thi `DashboardResponse`, khong tu cong du lieu tren trinh duyet.
   khac nhau khi chua co ty gia quy doi.
 - Lich su giao dich loc va phan trang tai database; client chi gui dieu kien va
   trang can xem, khong tai toan bo lich su roi loc tai trinh duyet.
+- Quy tac giao dich dinh ky thuoc module `recurring`, co controller, service va
+  repository rieng. Scheduler chi goi public service cua module nay; khi can ghi
+  giao dich, `RecurringRuleExecutionService` goi `TransactionService` thay vi
+  ghi truc tiep vao bang giao dich hay so cai. Quy tac tu dong chi chay khi
+  `autoRecord` duoc nguoi dung chu dong bat. Moi ky co idempotency key duoc tao
+  tu ID quy tac va thoi diem da hen, dong thoi rule duoc khoa pessimistic trong
+  giao dich rieng. Vi vay retry hoac nhieu scheduler khong the ghi trung ky.
+- Tan suat thang luu ngay neo ban dau. Mot quy tac dat ngay 31 se dung ngay 28
+  o thang Hai neu can, nhung se quay lai ngay 31 o thang Ba thay vi bi troi vinh
+  vien thanh ngay 28.
 
 ## Quy tac lien module
 

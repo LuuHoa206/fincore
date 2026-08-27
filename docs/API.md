@@ -419,6 +419,51 @@ in the audit trail.
 The original transaction is marked reversed and a balanced counter-transaction
 is added. The original record is never deleted.
 
+## Recurring transaction rules
+
+### List rules
+
+`GET /recurring-rules`
+
+Rules are ordered by their next scheduled time and include the selected wallet,
+category, recurrence frequency, and whether automatic posting is enabled.
+
+### Create or update a rule
+
+`POST /recurring-rules` and `PATCH /recurring-rules/{ruleId}`
+
+```json
+{
+  "name": "Monthly rent",
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "transactionType": "EXPENSE",
+  "amount": 5000000,
+  "description": "Rent payment",
+  "frequency": "MONTHLY",
+  "nextRunAt": "2026-09-01T01:00:00Z",
+  "autoRecord": false,
+  "enabled": true,
+  "applyAllocationRule": false
+}
+```
+
+Only `INCOME` and `EXPENSE` rules are accepted. The wallet, category, and rule
+must belong to the authenticated user; the category type must match the rule
+type. Automatic posting is opt-in, so a new rule is a reminder by default.
+
+### Record a due occurrence or disable a rule
+
+`POST /recurring-rules/{ruleId}/record` records exactly one occurrence when the
+rule is due. `DELETE /recurring-rules/{ruleId}` disables the rule while keeping
+its history and configuration for auditability.
+
+The scheduler checks opted-in due rules every five minutes by default. Each
+occurrence uses a deterministic idempotency key derived from the rule and its
+scheduled timestamp. Concurrent scheduler runs or a retry therefore cannot post
+the same occurrence twice. After recording, the next run advances to the first
+future period; missed periods are not bulk-posted after downtime.
+
 ## Dashboard report
 
 ### Get a financial dashboard

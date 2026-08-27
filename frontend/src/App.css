@@ -357,6 +357,31 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .allocation-rule-card li { display: flex; justify-content: space-between; gap: 12px; color: #4f645d; font-size: 12px; }
 .allocation-rule-card li strong { color: var(--ink); }
 .allocation-rule-modal { width: min(610px, 100%); }
+.recurring-rule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.recurring-rule-card { display: grid; overflow: hidden; border: 1px solid var(--line); border-top: 3px solid var(--green-600); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(22, 49, 41, .045); }
+.recurring-rule-card.recurring-rule-disabled { border-top-color: #91a29b; opacity: .76; }
+.recurring-rule-card > header { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 17px; border-bottom: 1px solid #edf2f0; }
+.recurring-rule-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 7px; color: var(--green-700); background: #e6f8f1; }
+.recurring-rule-icon.expense { color: #b54848; background: #fff0f0; }
+.recurring-rule-icon svg { width: 18px; }
+.recurring-rule-card header > div:nth-child(2) { min-width: 0; display: grid; gap: 4px; }
+.recurring-rule-card header strong { overflow: hidden; color: var(--ink); font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-rule-card header small, .recurring-rule-card dt { color: var(--muted); font-size: 10px; }
+.recurring-rule-card .icon-button { width: 32px; height: 32px; }
+.recurring-rule-amount { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 17px 12px; }
+.recurring-rule-amount span { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-rule-amount strong { color: var(--ink); font-size: 19px; white-space: nowrap; }
+.recurring-rule-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0 17px 15px; }
+.recurring-rule-card dl div { display: grid; gap: 5px; min-width: 0; }
+.recurring-rule-card dd { display: flex; align-items: center; gap: 5px; min-width: 0; margin: 0; color: #40544c; font-size: 11px; font-weight: 700; }
+.recurring-rule-card dd svg { width: 13px; color: var(--green-700); }
+.recurring-rule-card dd time { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recurring-rule-description { min-height: 37px; margin: 0; padding: 0 17px 15px; color: #60716b; font-size: 11px; line-height: 1.55; }
+.recurring-rule-card > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 59px; padding: 11px 17px; border-top: 1px solid #edf2f0; color: var(--muted); background: #fbfefd; font-size: 10px; }
+.recurring-rule-card > footer .secondary-button { min-height: 35px; padding: 0 10px; color: var(--green-700); border-color: #b8dfd2; font-size: 11px; }
+.recurring-rule-card > footer .secondary-button svg { width: 14px; }
+.due-badge { padding: 5px 7px; border-radius: 4px; color: #a86708; background: #fff2d8; font-size: 9px; font-weight: 800; }
+.recurring-rule-modal { width: min(620px, 100%); }
 .rule-item-editor { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 7px; background: #f8fbfa; }
 .rule-item-heading { display: flex; justify-content: space-between; color: #43574f; font-size: 12px; font-weight: 800; }
 .rule-item-heading b { color: var(--green-700); }

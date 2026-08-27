@@ -37,6 +37,8 @@ management:
       show-details: when-authorized
 
 app:
+  recurring:
+    fixed-delay: ${RECURRING_FIXED_DELAY:PT5M}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   security:
