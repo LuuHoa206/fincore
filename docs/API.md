@@ -457,6 +457,15 @@ is added. The original record is never deleted.
 Rules are ordered by their next scheduled time and include the selected wallet,
 category, recurrence frequency, and whether automatic posting is enabled.
 
+### Review upcoming recurring rules
+
+`GET /recurring-rules/upcoming?limit=4`
+
+Returns 1 to 10 enabled rules for the authenticated user, ordered by their next
+scheduled time. It is a read-only dashboard helper: it can include a past-due
+rule so the user can see that an occurrence still needs to be recorded. The
+endpoint never posts a transaction or advances a rule schedule.
+
 ### Create or update a rule
 
 `POST /recurring-rules` and `PATCH /recurring-rules/{ruleId}`
