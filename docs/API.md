@@ -628,6 +628,19 @@ This endpoint does not create transactions, reserve funds, or advance a
 recurring rule's `nextRunAt`. It is a deterministic schedule preview, not an
 exchange-rate conversion or a prediction of discretionary spending.
 
+### Review monthly cash-flow trend
+
+`GET /reports/dashboard/cash-flow-trend?months=6`
+
+Returns posted income and expense totals for each month in the requested
+window. `months` is optional (defaults to `6`) and must be from `3` to `12`.
+The current partial month is included, boundaries follow the user's configured
+time zone, and every currency is returned as a separate chronological series.
+
+The endpoint is read-only and reports recorded transactions only. It does not
+include recurring-rule forecasts, perform exchange-rate conversion, or modify
+any financial record.
+
 ## Error format
 
 Validation and business errors share one response shape:

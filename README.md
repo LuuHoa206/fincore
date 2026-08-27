@@ -168,6 +168,10 @@ It presents projected income, expense, and net totals per currency alongside
 the nearest planned occurrences, without creating transactions or modifying a
 schedule.
 
+The dashboard also includes a 3-to-12-month cash-flow trend built exclusively
+from posted transactions. Income, expense, and net flow remain separated by
+currency and the report never applies an assumed exchange rate.
+
 Transaction history can be exported as a Vietnamese Excel-friendly CSV using
 the active server-side filters. Export remains owner-scoped and read-only, uses
 the user's time zone for timestamps, and rejects requests above 10,000 rows

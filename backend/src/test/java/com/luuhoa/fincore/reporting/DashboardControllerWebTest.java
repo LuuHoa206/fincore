@@ -44,6 +44,37 @@ class DashboardControllerWebTest {
     @MockitoBean
     private CashFlowForecastService cashFlowForecastService;
 
+    @MockitoBean
+    private CashFlowTrendService cashFlowTrendService;
+
+    @Test
+    void returnsCashFlowTrendOnlyForTheAuthenticatedUser() throws Exception {
+        UUID userId = UUID.randomUUID();
+        when(cashFlowTrendService.trend(userId, 6)).thenReturn(new CashFlowTrendResponse(
+                6,
+                "Asia/Ho_Chi_Minh",
+                List.of(new CashFlowTrendCurrency("VND", List.of(
+                        new MonthlyCashFlowTrendPoint(YearMonth.of(2026, 7), new BigDecimal("8000000"), new BigDecimal("3000000"), new BigDecimal("5000000")))))));
+
+        mockMvc.perform(get("/api/v1/reports/dashboard/cash-flow-trend")
+                        .with(jwt().jwt(token -> token.subject(userId.toString())))
+                        .queryParam("months", "6"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.months").value(6))
+                .andExpect(jsonPath("$.currencySeries[0].currency").value("VND"))
+                .andExpect(jsonPath("$.currencySeries[0].points[0].net").value(5000000));
+
+        verify(cashFlowTrendService).trend(eq(userId), eq(6));
+    }
+
+    @Test
+    void protectsCashFlowTrendLikeEveryOtherFinancialEndpoint() throws Exception {
+        mockMvc.perform(get("/api/v1/reports/dashboard/cash-flow-trend"))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(cashFlowTrendService);
+    }
+
     @Test
     void returnsCashFlowForecastOnlyForTheAuthenticatedUser() throws Exception {
         UUID userId = UUID.randomUUID();

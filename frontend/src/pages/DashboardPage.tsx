@@ -7,20 +7,25 @@ import { reportingApi } from '../features/reporting/reportingApi'
 import { recurringApi } from '../features/recurring/recurringApi'
 import { formatCurrency, formatDateTime } from '../features/transactions/transactionFormatters'
 import type { Transaction } from '../features/transactions/transactionTypes'
-import type { CashFlowForecastOccurrence, FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
+import type { CashFlowForecastOccurrence, CashFlowTrendCurrency, FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
 import type { RecurringRule } from '../features/recurring/recurringTypes'
 
 export function DashboardPage() {
   const { user } = useAuth()
   const [dashboardOpenedAt] = useState(() => Date.now())
+  const [selectedTrendCurrency, setSelectedTrendCurrency] = useState<string | null>(null)
   const dashboardQuery = useQuery({ queryKey: ['dashboard'], queryFn: () => reportingApi.dashboard() })
   const insightQuery = useQuery({ queryKey: ['monthly-insights'], queryFn: () => reportingApi.monthlyInsights() })
   const unusualExpenseQuery = useQuery({ queryKey: ['unusual-expenses'], queryFn: () => reportingApi.unusualExpenses() })
   const upcomingRecurringQuery = useQuery({ queryKey: ['upcoming-recurring-rules', 4], queryFn: () => recurringApi.upcoming(4) })
   const cashFlowForecastQuery = useQuery({ queryKey: ['cash-flow-forecast', 30], queryFn: () => reportingApi.cashFlowForecast(30) })
+  const cashFlowTrendQuery = useQuery({ queryKey: ['cash-flow-trend', 6], queryFn: () => reportingApi.cashFlowTrend(6) })
   const report = dashboardQuery.data
   const preferredCurrency = user?.preferredCurrency ?? 'VND'
   const summary = report?.currencySummaries.find((item) => item.currency === preferredCurrency) ?? report?.currencySummaries[0]
+  const trendSeries = cashFlowTrendQuery.data?.currencySeries.find((item) => item.currency === selectedTrendCurrency)
+    ?? cashFlowTrendQuery.data?.currencySeries.find((item) => item.currency === preferredCurrency)
+    ?? cashFlowTrendQuery.data?.currencySeries[0]
   const firstName = user?.displayName.trim().split(/\s+/).at(-1) ?? 'bạn'
 
   return <>
@@ -77,6 +82,21 @@ export function DashboardPage() {
         </>}
       </section>
 
+      <section className="panel cash-flow-trend-panel">
+        <div className="section-heading"><div><p className="eyebrow">LỊCH SỬ DÒNG TIỀN</p><h2>Xu hướng 6 tháng</h2></div><TrendingUp className="cash-flow-trend-heading-icon" /></div>
+        <p className="insights-caption">Tổng hợp từ các giao dịch đã ghi nhận. Khoản thu và chi được tách riêng theo từng loại tiền.</p>
+        {cashFlowTrendQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tổng hợp xu hướng</div>}
+        {cashFlowTrendQuery.isError && <div className="form-alert" role="alert">Không thể tải xu hướng dòng tiền. Hãy thử làm mới trang.</div>}
+        {!cashFlowTrendQuery.isPending && !cashFlowTrendQuery.isError && !cashFlowTrendQuery.data?.currencySeries.length && <div className="dashboard-empty cash-flow-trend-empty"><TrendingUp /><span>Chưa có giao dịch để tạo xu hướng</span><Link to="/transactions">Ghi nhận giao dịch</Link></div>}
+        {!!trendSeries && <>
+          <div className="cash-flow-trend-tools">
+            <div className="cash-flow-trend-legend"><span className="income-legend">Thu</span><span className="expense-legend">Chi</span></div>
+            {cashFlowTrendQuery.data && cashFlowTrendQuery.data.currencySeries.length > 1 && <label className="trend-currency-select"><span>Loại tiền</span><select value={trendSeries.currency} onChange={(event) => setSelectedTrendCurrency(event.target.value)}>{cashFlowTrendQuery.data.currencySeries.map((series) => <option key={series.currency} value={series.currency}>{series.currency}</option>)}</select></label>}
+          </div>
+          <CashFlowTrendChart series={trendSeries} />
+        </>}
+      </section>
+
       <section className="panel insights-panel">
         <div className="section-heading"><div><p className="eyebrow">TRỢ LÝ PHÂN TÍCH</p><h2>Tóm tắt tài chính tháng</h2></div><Lightbulb className="insights-heading-icon" /></div>
         <p className="insights-caption">Nhận xét được tạo từ các giao dịch, ngân sách và mục tiêu bạn đã ghi nhận.</p>
@@ -114,6 +134,24 @@ function CashFlowForecastItem({ occurrence }: { occurrence: CashFlowForecastOccu
     <div><strong>{occurrence.ruleName}</strong><small>{formatDateTime(occurrence.scheduledAt)} · {occurrence.walletName} · {occurrence.categoryName}</small></div>
     <strong className={isIncome ? 'amount-income' : 'amount-expense'}>{isIncome ? '+' : '-'}{formatCurrency(occurrence.amount, occurrence.currency)}</strong>
   </article>
+}
+
+function CashFlowTrendChart({ series }: { series: CashFlowTrendCurrency }) {
+  const maximum = Math.max(...series.points.flatMap((point) => [point.income, point.expense]), 1)
+  return <div className="cash-flow-trend-chart" aria-label={`Xu hướng thu chi ${series.currency}`}>
+    {series.points.map((point) => <article key={point.period} className="cash-flow-trend-column">
+      <div className="cash-flow-trend-bars" title={`Thu ${formatCurrency(point.income, series.currency)}, chi ${formatCurrency(point.expense, series.currency)}`}>
+        <span className="trend-income-bar" style={{ height: `${Math.max(5, point.income / maximum * 100)}%` }} />
+        <span className="trend-expense-bar" style={{ height: `${Math.max(5, point.expense / maximum * 100)}%` }} />
+      </div>
+      <strong className={point.net >= 0 ? 'amount-income' : 'amount-expense'}>{formatCurrency(point.net, series.currency)}</strong>
+      <small>{monthLabel(point.period)}</small>
+    </article>)}
+  </div>
+}
+
+function monthLabel(period: string) {
+  return `T${Number(period.slice(5, 7))}`
 }
 
 function InsightItem({ insight }: { insight: FinancialInsight }) {

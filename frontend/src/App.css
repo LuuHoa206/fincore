@@ -200,6 +200,25 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .cash-flow-occurrence > div small { color: var(--muted); font-size: 10px; }
 .cash-flow-occurrence > strong { text-align: right; font-size: 13px; }
 .cash-flow-forecast-empty { grid-template-columns: 36px minmax(0, 1fr); }
+.cash-flow-trend-panel { grid-column: 1 / -1; }
+.cash-flow-trend-heading-icon { width: 22px; color: #3c6e9f; }
+.cash-flow-trend-tools { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.cash-flow-trend-legend { display: flex; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.cash-flow-trend-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.cash-flow-trend-legend span::before { width: 8px; height: 8px; display: block; border-radius: 2px; content: ''; }
+.income-legend::before { background: #0b8066; }
+.expense-legend::before { background: #c85454; }
+.trend-currency-select { display: grid; gap: 4px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.trend-currency-select select { min-width: 92px; min-height: 32px; padding: 0 9px; font-size: 11px; }
+.cash-flow-trend-chart { min-height: 206px; display: grid; grid-template-columns: repeat(6, minmax(66px, 1fr)); gap: 10px; align-items: end; padding: 12px 8px 4px; border-top: 1px solid #edf2f0; overflow-x: auto; }
+.cash-flow-trend-column { min-width: 66px; display: grid; grid-template-rows: 120px auto auto; gap: 5px; text-align: center; }
+.cash-flow-trend-bars { height: 120px; display: flex; align-items: end; justify-content: center; gap: 5px; padding: 0 3px; border-bottom: 1px solid #dfece6; cursor: default; }
+.cash-flow-trend-bars span { width: min(28px, 34%); min-height: 5px; border-radius: 4px 4px 0 0; }
+.trend-income-bar { background: #0b8066; }
+.trend-expense-bar { background: #d16a6a; }
+.cash-flow-trend-column > strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.cash-flow-trend-column > small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.cash-flow-trend-empty { grid-template-columns: 36px minmax(0, 1fr); }
 
 .logout-link {
   width: 100%; border: 0; color: #dcebe6; background: transparent; text-align: left;
@@ -578,6 +597,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .unusual-expenses-panel { grid-column: auto; }
   .upcoming-recurring-panel { grid-column: auto; }
   .cash-flow-forecast-panel { grid-column: auto; }
+  .cash-flow-trend-panel { grid-column: auto; }
   .insight-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wallet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -609,6 +629,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .cash-flow-summary-item > small { padding-bottom: 4px; border-bottom: 1px solid #e5eeea; }
   .cash-flow-occurrence { grid-template-columns: 34px minmax(0, 1fr); }
   .cash-flow-occurrence > strong { grid-column: 2; text-align: left; }
+  .cash-flow-trend-tools { align-items: flex-start; flex-direction: column; }
   .budget-content { align-items: flex-start; }
   .budget-ring { width: 110px; height: 110px; }
   .budget-ring::before { width: 80px; height: 80px; }
