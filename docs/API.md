@@ -614,6 +614,20 @@ multiple, severity (`MEDIUM` or `HIGH`), and an explanatory reason. Findings
 are review prompts only: the endpoint never changes financial data and does not
 claim that a transaction is fraudulent.
 
+### Preview recurring cash flow
+
+`GET /reports/dashboard/cash-flow-forecast?days=30`
+
+Returns a read-only projection from the authenticated user's enabled recurring
+rules. `days` is optional (defaults to `30`) and must be from `7` to `90`.
+The result uses the user's configured time zone, keeps each currency separate,
+and contains projected income, expense, and net totals plus up to twelve
+nearest scheduled occurrences.
+
+This endpoint does not create transactions, reserve funds, or advance a
+recurring rule's `nextRunAt`. It is a deterministic schedule preview, not an
+exchange-rate conversion or a prediction of discretionary spending.
+
 ## Error format
 
 Validation and business errors share one response shape:

@@ -163,6 +163,11 @@ posted expenses exist in the same category and currency during the prior three
 months, and the current amount is at least 2.5 times that historical average.
 This is a review prompt, not a fraud decision, prediction, or automatic change.
 
+Enabled recurring rules also power a read-only 7-to-90-day cash-flow preview.
+It presents projected income, expense, and net totals per currency alongside
+the nearest planned occurrences, without creating transactions or modifying a
+schedule.
+
 Transaction history can be exported as a Vietnamese Excel-friendly CSV using
 the active server-side filters. Export remains owner-scoped and read-only, uses
 the user's time zone for timestamps, and rejects requests above 10,000 rows

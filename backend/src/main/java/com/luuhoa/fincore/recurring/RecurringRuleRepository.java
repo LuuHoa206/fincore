@@ -35,6 +35,16 @@ public interface RecurringRuleRepository extends JpaRepository<RecurringRule, UU
     List<RecurringRule> findEnabledByUserIdWithDetails(@Param("userId") UUID userId, Pageable pageable);
 
     @Query("""
+            select rule from RecurringRule rule
+            join fetch rule.wallet
+            join fetch rule.category
+            where rule.user.id = :userId
+              and rule.enabled = true
+            order by rule.nextRunAt asc
+            """)
+    List<RecurringRule> findAllEnabledByUserIdWithDetails(@Param("userId") UUID userId);
+
+    @Query("""
             select rule.id from RecurringRule rule
             where rule.enabled = true
               and rule.autoRecord = true

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, Info, Lightbulb, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, CalendarRange, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, Info, Lightbulb, LoaderCircle, Plus, Target, TrendingUp, WalletCards } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
@@ -7,7 +7,7 @@ import { reportingApi } from '../features/reporting/reportingApi'
 import { recurringApi } from '../features/recurring/recurringApi'
 import { formatCurrency, formatDateTime } from '../features/transactions/transactionFormatters'
 import type { Transaction } from '../features/transactions/transactionTypes'
-import type { FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
+import type { CashFlowForecastOccurrence, FinancialInsight, FinancialInsightSeverity, UnusualExpense } from '../features/reporting/reportingTypes'
 import type { RecurringRule } from '../features/recurring/recurringTypes'
 
 export function DashboardPage() {
@@ -17,6 +17,7 @@ export function DashboardPage() {
   const insightQuery = useQuery({ queryKey: ['monthly-insights'], queryFn: () => reportingApi.monthlyInsights() })
   const unusualExpenseQuery = useQuery({ queryKey: ['unusual-expenses'], queryFn: () => reportingApi.unusualExpenses() })
   const upcomingRecurringQuery = useQuery({ queryKey: ['upcoming-recurring-rules', 4], queryFn: () => recurringApi.upcoming(4) })
+  const cashFlowForecastQuery = useQuery({ queryKey: ['cash-flow-forecast', 30], queryFn: () => reportingApi.cashFlowForecast(30) })
   const report = dashboardQuery.data
   const preferredCurrency = user?.preferredCurrency ?? 'VND'
   const summary = report?.currencySummaries.find((item) => item.currency === preferredCurrency) ?? report?.currencySummaries[0]
@@ -58,6 +59,24 @@ export function DashboardPage() {
         </div>}
       </section>
 
+      <section className="panel cash-flow-forecast-panel">
+        <div className="section-heading"><div><p className="eyebrow">DỰ BÁO DÒNG TIỀN</p><h2>30 ngày tới</h2></div><CalendarRange className="cash-flow-forecast-heading-icon" /></div>
+        <p className="insights-caption">Ước tính từ các lịch thu chi đang bật. Đây là kế hoạch tham khảo, chưa phải giao dịch đã ghi nhận.</p>
+        {cashFlowForecastQuery.isPending && <div className="inline-loading"><LoaderCircle className="spin" /> Đang tính dự báo</div>}
+        {cashFlowForecastQuery.isError && <div className="form-alert" role="alert">Không thể tải dự báo dòng tiền. Hãy thử làm mới trang.</div>}
+        {!cashFlowForecastQuery.isPending && !cashFlowForecastQuery.isError && !cashFlowForecastQuery.data?.currencySummaries.length && <div className="dashboard-empty cash-flow-forecast-empty"><CalendarRange /><span>Chưa có lịch thu chi để dự báo</span><Link to="/recurring">Tạo lịch thu chi</Link></div>}
+        {!!cashFlowForecastQuery.data?.currencySummaries.length && <>
+          <div className="cash-flow-summary-list">
+            {cashFlowForecastQuery.data.currencySummaries.map((summary) => <article key={summary.currency} className="cash-flow-summary-item">
+              <small>{summary.currency}</small><div><span>Dự kiến thu</span><strong className="amount-income">+{formatCurrency(summary.projectedIncome, summary.currency)}</strong></div><div><span>Dự kiến chi</span><strong className="amount-expense">-{formatCurrency(summary.projectedExpense, summary.currency)}</strong></div><div><span>Chênh lệch</span><strong className={summary.projectedNet >= 0 ? 'amount-income' : 'amount-expense'}>{formatCurrency(summary.projectedNet, summary.currency)}</strong></div>
+            </article>)}
+          </div>
+          {!!cashFlowForecastQuery.data.upcomingOccurrences.length && <div className="cash-flow-occurrence-list">
+            {cashFlowForecastQuery.data.upcomingOccurrences.slice(0, 4).map((occurrence, index) => <CashFlowForecastItem key={`${occurrence.recurringRuleId}-${occurrence.scheduledAt}-${index}`} occurrence={occurrence} />)}
+          </div>}
+        </>}
+      </section>
+
       <section className="panel insights-panel">
         <div className="section-heading"><div><p className="eyebrow">TRỢ LÝ PHÂN TÍCH</p><h2>Tóm tắt tài chính tháng</h2></div><Lightbulb className="insights-heading-icon" /></div>
         <p className="insights-caption">Nhận xét được tạo từ các giao dịch, ngân sách và mục tiêu bạn đã ghi nhận.</p>
@@ -86,6 +105,15 @@ export function DashboardPage() {
       </section>
     </div>
   </>
+}
+
+function CashFlowForecastItem({ occurrence }: { occurrence: CashFlowForecastOccurrence }) {
+  const isIncome = occurrence.transactionType === 'INCOME'
+  return <article className={`cash-flow-occurrence is-${occurrence.transactionType.toLowerCase()}`}>
+    <span className="cash-flow-occurrence-icon"><CalendarClock /></span>
+    <div><strong>{occurrence.ruleName}</strong><small>{formatDateTime(occurrence.scheduledAt)} · {occurrence.walletName} · {occurrence.categoryName}</small></div>
+    <strong className={isIncome ? 'amount-income' : 'amount-expense'}>{isIncome ? '+' : '-'}{formatCurrency(occurrence.amount, occurrence.currency)}</strong>
+  </article>
 }
 
 function InsightItem({ insight }: { insight: FinancialInsight }) {

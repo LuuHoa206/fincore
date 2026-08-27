@@ -1,4 +1,5 @@
 import type { Transaction } from '../transactions/transactionTypes'
+import type { CategoryType } from '../categories/categoryTypes'
 
 export type CurrencyDashboardSummary = {
   currency: string
@@ -60,4 +61,31 @@ export type UnusualExpensesReport = {
   period: string
   timeZone: string
   findings: UnusualExpense[]
+}
+
+export type CashFlowForecastCurrencySummary = {
+  currency: string
+  projectedIncome: number
+  projectedExpense: number
+  projectedNet: number
+}
+
+export type CashFlowForecastOccurrence = {
+  recurringRuleId: string
+  ruleName: string
+  walletName: string
+  categoryName: string
+  transactionType: CategoryType
+  amount: number
+  currency: string
+  scheduledAt: string
+}
+
+export type CashFlowForecast = {
+  from: string
+  toExclusive: string
+  days: number
+  timeZone: string
+  currencySummaries: CashFlowForecastCurrencySummary[]
+  upcomingOccurrences: CashFlowForecastOccurrence[]
 }

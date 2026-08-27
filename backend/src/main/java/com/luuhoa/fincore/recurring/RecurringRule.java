@@ -136,6 +136,7 @@ public class RecurringRule {
     public String getDescription() { return description; }
     public String getNotes() { return notes; }
     public RecurringFrequency getFrequency() { return frequency; }
+    public int getScheduleDay() { return scheduleDay; }
     public Instant getNextRunAt() { return nextRunAt; }
     public boolean isAutoRecord() { return autoRecord; }
     public boolean isEnabled() { return enabled; }
