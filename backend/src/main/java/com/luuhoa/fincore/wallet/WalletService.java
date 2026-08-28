@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 
@@ -19,10 +20,12 @@ public class WalletService {
 
     private final WalletRepository walletRepository;
     private final UserAccountRepository userRepository;
+    private final AuditLogService auditLogService;
 
-    public WalletService(WalletRepository walletRepository, UserAccountRepository userRepository) {
+    public WalletService(WalletRepository walletRepository, UserAccountRepository userRepository, AuditLogService auditLogService) {
         this.walletRepository = walletRepository;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -101,7 +104,9 @@ public class WalletService {
                 currency,
                 request.allowNegative());
         try {
-            return WalletResponse.from(walletRepository.saveAndFlush(wallet));
+            Wallet saved = walletRepository.saveAndFlush(wallet);
+            auditLogService.record(user, "WALLET_CREATED", "WALLET", saved.getId(), walletDetails(saved));
+            return WalletResponse.from(saved);
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("WALLET_NAME_ALREADY_EXISTS", "A wallet with this name already exists");
         }
@@ -110,6 +115,7 @@ public class WalletService {
     @Transactional
     public WalletResponse update(UUID userId, UUID walletId, UpdateWalletRequest request) {
         Wallet wallet = requireOwnedWallet(userId, walletId);
+        UserAccount user = requireUser(userId);
         String name = request.name();
         if (name != null) {
             name = name.trim();
@@ -120,6 +126,7 @@ public class WalletService {
         wallet.updateDetails(name, request.walletType(), request.allowNegative());
         try {
             walletRepository.flush();
+            auditLogService.record(user, "WALLET_UPDATED", "WALLET", wallet.getId(), walletDetails(wallet));
             return WalletResponse.from(wallet);
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("WALLET_NAME_ALREADY_EXISTS", "A wallet with this name already exists");
@@ -128,7 +135,9 @@ public class WalletService {
 
     @Transactional
     public void archive(UUID userId, UUID walletId) {
-        requireOwnedWallet(userId, walletId).archive();
+        Wallet wallet = requireOwnedWallet(userId, walletId);
+        wallet.archive();
+        auditLogService.record(requireUser(userId), "WALLET_ARCHIVED", "WALLET", wallet.getId(), walletDetails(wallet));
     }
 
     private Wallet requireOwnedWallet(UUID userId, UUID walletId) {
@@ -144,5 +153,18 @@ public class WalletService {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Currency must be a valid ISO 4217 code");
         }
+    }
+
+    private UserAccount requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private java.util.Map<String, Object> walletDetails(Wallet wallet) {
+        return java.util.Map.of(
+                "name", wallet.getName(),
+                "walletType", wallet.getWalletType().name(),
+                "currency", wallet.getCurrency(),
+                "allowNegative", wallet.isAllowNegative());
     }
 }
