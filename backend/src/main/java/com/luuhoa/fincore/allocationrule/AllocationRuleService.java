@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.moneyjar.MoneyJar;
@@ -35,16 +36,19 @@ public class AllocationRuleService {
     private final UserAccountRepository userRepository;
     private final MoneyJarService moneyJarService;
     private final WalletService walletService;
+    private final AuditLogService auditLogService;
 
     public AllocationRuleService(
             AllocationRuleRepository allocationRuleRepository,
             UserAccountRepository userRepository,
             MoneyJarService moneyJarService,
-            WalletService walletService) {
+            WalletService walletService,
+            AuditLogService auditLogService) {
         this.allocationRuleRepository = allocationRuleRepository;
         this.userRepository = userRepository;
         this.moneyJarService = moneyJarService;
         this.walletService = walletService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -56,8 +60,7 @@ public class AllocationRuleService {
 
     @Transactional
     public AllocationRuleResponse create(UUID userId, CreateAllocationRuleRequest request) {
-        UserAccount user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+        UserAccount user = requireUser(userId);
         String currency = normalizeCurrency(request.currency());
         String name = normalizeName(request.name());
         if (allocationRuleRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
@@ -65,16 +68,20 @@ public class AllocationRuleService {
         }
         AllocationRule rule = new AllocationRule(user, name, currency, request.enabled());
         rule.replaceItems(buildItems(userId, currency, request.items()));
+        AllocationRule savedRule;
         try {
-            return AllocationRuleResponse.from(allocationRuleRepository.saveAndFlush(rule));
+            savedRule = allocationRuleRepository.saveAndFlush(rule);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateEnabledRule(exception, request.enabled());
         }
+        auditLogService.record(user, "ALLOCATION_RULE_CREATED", "ALLOCATION_RULE", savedRule.getId(), ruleDetails(savedRule));
+        return AllocationRuleResponse.from(savedRule);
     }
 
     @Transactional
     public AllocationRuleResponse update(UUID userId, UUID ruleId, UpdateAllocationRuleRequest request) {
         AllocationRule rule = requireOwnedRule(userId, ruleId);
+        UserAccount user = requireUser(userId);
         String name = normalizeName(request.name());
         if (!rule.getName().equalsIgnoreCase(name) && allocationRuleRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
             throw new ConflictException("ALLOCATION_RULE_NAME_ALREADY_EXISTS", "An allocation rule with this name already exists");
@@ -83,15 +90,18 @@ public class AllocationRuleService {
         rule.replaceItems(buildItems(userId, rule.getCurrency(), request.items()));
         try {
             allocationRuleRepository.flush();
-            return AllocationRuleResponse.from(rule);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateEnabledRule(exception, request.enabled());
         }
+        auditLogService.record(user, "ALLOCATION_RULE_UPDATED", "ALLOCATION_RULE", rule.getId(), ruleDetails(rule));
+        return AllocationRuleResponse.from(rule);
     }
 
     @Transactional
     public void delete(UUID userId, UUID ruleId) {
-        allocationRuleRepository.delete(requireOwnedRule(userId, ruleId));
+        AllocationRule rule = requireOwnedRule(userId, ruleId);
+        allocationRuleRepository.delete(rule);
+        auditLogService.record(requireUser(userId), "ALLOCATION_RULE_DELETED", "ALLOCATION_RULE", rule.getId(), ruleDetails(rule));
     }
 
     @Transactional(readOnly = true)
@@ -189,6 +199,19 @@ public class AllocationRuleService {
     private AllocationRule requireOwnedRule(UUID userId, UUID ruleId) {
         return allocationRuleRepository.findOwnedWithItems(ruleId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("ALLOCATION_RULE_NOT_FOUND", "Allocation rule was not found"));
+    }
+
+    private UserAccount requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private Map<String, Object> ruleDetails(AllocationRule rule) {
+        return Map.of(
+                "name", rule.getName(),
+                "currency", rule.getCurrency(),
+                "enabled", rule.isEnabled(),
+                "itemCount", rule.getItems().size());
     }
 
     private BigDecimal normalizeAmount(BigDecimal requestedAmount, String currencyCode) {
