@@ -80,7 +80,9 @@ docker compose --env-file .env.production -f docker-compose.production.yml confi
 ```
 
 When Docker Desktop is available, also execute the PostgreSQL/Flyway integration
-suite documented in the root README.
+suite documented in the root README. GitHub Actions cũng chạy hai test này trên
+PostgreSQL Testcontainers ở mỗi pull request vào `dev` hoặc `main`; local chỉ
+cần chạy khi thay đổi migration, mapping JPA hoặc trước một release quan trọng.
 
 ## Recurring auto-record recovery
 

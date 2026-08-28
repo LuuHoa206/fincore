@@ -31,6 +31,27 @@ jobs:
       - name: Run backend tests
         run: bash ./mvnw test
 
+  database-integration:
+    name: PostgreSQL migration integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RUN_INTEGRATION_TESTS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Confirm Docker is available for Testcontainers
+        run: docker version --format '{{.Server.Version}}'
+      - name: Verify PostgreSQL, Flyway and JPA schema
+        run: bash ./mvnw test "-Dtest=FinCoreBackendApplicationTests,DatabaseMigrationIntegrationTests"
+
   frontend:
     name: Frontend quality
     runs-on: ubuntu-latest
