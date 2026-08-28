@@ -74,6 +74,15 @@ nay khong co repository rieng, khong ghi entity va khong thay doi so du. Client
 phai dua de xuat vao form giao dich thong thuong va nguoi dung van phai gui
 request tao giao dich rieng co `Idempotency-Key`.
 
+Luong `GET /api/v1/budgets/suggestions` la mot read-model tuong tu.
+`BudgetController` chi xac thuc user va chuyen thang/tien te cho
+`BudgetLimitSuggestionService`. Service doc danh muc chi co the su dung, loai
+tru danh muc da co budget trong thang duoc chon va tong hop cac giao dich
+`EXPENSE` da `POSTED` cua ba thang truoc qua public
+`TransactionReportingService`. Ket qua la han muc trung binh theo tung loai
+tien; khong co entity nao duoc ghi va client van phai goi `POST /budgets` de
+nguoi dung xac nhan tao ngan sach.
+
 Luong `GET /api/v1/reports/dashboard` cung tuan theo quy uoc nay. `DashboardController`
 chi lay nguoi dung va tham so thang, `DashboardService` phoi hop cac public
 service cua wallet, money jar, budget, saving goal va transaction. Cac tong thu
@@ -119,6 +128,9 @@ cu the, khong phai ket luan gian lan.
 - Ngan sach khong luu tru truong "da chi" de tranh sai lech du lieu. `BudgetService`
   lay tong giao dich `EXPENSE` co trang thai `POSTED` trong dung thang, dung danh
   muc va dung loai tien thong qua `TransactionReportingService`.
+- Goi y han muc ngan sach cung chi doc giao dich `EXPENSE` da `POSTED`. No
+  khong bao gio tao budget tu dong, bo qua danh muc da co budget trong thang
+  dich va khong tron cac giao dich khac tien te.
 - Muc tieu tiet kiem lay tien da tich luy tu `allocatedBalance` cua mot hu tien.
   `SavingGoalService` goi public service cua module `moneyjar`, khong truy cap
   truc tiep repository cua module nay.

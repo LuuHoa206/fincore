@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Archive, CircleAlert, LoaderCircle, Pencil, Plus, Target, X } from 'lucide-react'
+import { AlertTriangle, Archive, CircleAlert, LoaderCircle, Pencil, Plus, Sparkles, Target, X } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import { getApiErrorMessage } from '../../shared/api/apiError'
@@ -7,7 +7,7 @@ import { useAuth } from '../auth/authContextState'
 import { categoryApi } from '../categories/categoryApi'
 import { formatCurrency } from '../transactions/transactionFormatters'
 import { budgetApi } from './budgetApi'
-import type { Budget, CreateBudgetInput, UpdateBudgetInput } from './budgetTypes'
+import type { Budget, BudgetLimitSuggestion, CreateBudgetInput, UpdateBudgetInput } from './budgetTypes'
 
 function currentMonth() {
   return new Date().toISOString().slice(0, 7)
@@ -24,15 +24,21 @@ export function BudgetsPage() {
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(currentMonth)
   const [formTarget, setFormTarget] = useState<Budget | 'new' | null>(null)
+  const [selectedSuggestion, setSelectedSuggestion] = useState<BudgetLimitSuggestion | null>(null)
   const [archiveTarget, setArchiveTarget] = useState<Budget | null>(null)
   const [actionError, setActionError] = useState('')
   const budgetsQuery = useQuery({ queryKey: ['budgets', period], queryFn: () => budgetApi.list(period) })
   const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: () => categoryApi.list() })
+  const suggestionsQuery = useQuery({
+    queryKey: ['budget-limit-suggestions', period, user?.preferredCurrency],
+    queryFn: () => budgetApi.suggestions(period, user?.preferredCurrency ?? 'VND'),
+  })
   const archiveMutation = useMutation({
     mutationFn: budgetApi.archive,
     onSuccess: () => {
       setArchiveTarget(null)
       void queryClient.invalidateQueries({ queryKey: ['budgets', period] })
+      void queryClient.invalidateQueries({ queryKey: ['budget-limit-suggestions', period] })
     },
     onError: (error) => setActionError(getApiErrorMessage(error, 'Không thể lưu trữ ngân sách.')),
   })
@@ -43,25 +49,48 @@ export function BudgetsPage() {
   )
   const loading = budgetsQuery.isPending || categoriesQuery.isPending
   const failed = budgetsQuery.isError || categoriesQuery.isError
+  const openNewBudget = () => { setSelectedSuggestion(null); setFormTarget('new') }
+  const useSuggestion = (suggestion: BudgetLimitSuggestion) => { setSelectedSuggestion(suggestion); setFormTarget('new') }
+  const closeForm = () => { setFormTarget(null); setSelectedSuggestion(null) }
+  const saved = () => {
+    closeForm()
+    void queryClient.invalidateQueries({ queryKey: ['budgets', period] })
+    void queryClient.invalidateQueries({ queryKey: ['budget-limit-suggestions', period] })
+  }
 
   return <>
     <header className="topbar wallet-topbar">
       <div><p className="eyebrow">KIỂM SOÁT CHI TIÊU</p><h1>Ngân sách tháng</h1><p className="page-subtitle">Đặt hạn mức cho từng danh mục chi. Số đã chi được tính từ giao dịch đã ghi nhận trong tháng, không nhập thủ công.</p></div>
-      <div className="budget-actions"><label className="month-picker"><span>Tháng theo dõi</span><input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} /></label><button className="primary-button" onClick={() => setFormTarget('new')}><Plus /> Thêm ngân sách</button></div>
+      <div className="budget-actions"><label className="month-picker"><span>Tháng theo dõi</span><input type="month" value={period} onChange={(event) => setPeriod(event.target.value)} /></label><button className="primary-button" onClick={openNewBudget}><Plus /> Thêm ngân sách</button></div>
     </header>
 
     {actionError && <div className="form-alert page-alert" role="alert">{actionError}<button onClick={() => setActionError('')} aria-label="Đóng"><X /></button></div>}
     {loading && <div className="content-state"><LoaderCircle className="spin" /><span>Đang tải ngân sách</span></div>}
     {failed && <div className="content-state error-state"><CircleAlert /><strong>Chưa thể tải ngân sách</strong><p>{getApiErrorMessage(budgetsQuery.error ?? categoriesQuery.error, 'Vui lòng thử lại.')}</p><button className="secondary-button" onClick={() => { void budgetsQuery.refetch(); void categoriesQuery.refetch() }}>Thử lại</button></div>}
     {!loading && !failed && <>
-      {budgetsQuery.data?.length === 0 ? <div className="content-state"><Target /><strong>Chưa có ngân sách trong tháng này</strong><p>Chọn một danh mục chi và thiết lập hạn mức để bắt đầu theo dõi.</p><button className="primary-button" onClick={() => setFormTarget('new')}><Plus /> Tạo ngân sách</button></div> : <section className="budget-list">
+      <BudgetSuggestionPanel suggestions={suggestionsQuery.data ?? []} isLoading={suggestionsQuery.isPending} isError={suggestionsQuery.isError} onRetry={() => void suggestionsQuery.refetch()} onUse={useSuggestion} />
+      {budgetsQuery.data?.length === 0 ? <div className="content-state"><Target /><strong>Chưa có ngân sách trong tháng này</strong><p>Chọn một danh mục chi và thiết lập hạn mức để bắt đầu theo dõi.</p><button className="primary-button" onClick={openNewBudget}><Plus /> Tạo ngân sách</button></div> : <section className="budget-list">
         {budgetsQuery.data?.map((budget) => <BudgetCard key={budget.id} budget={budget} onEdit={() => setFormTarget(budget)} onArchive={() => setArchiveTarget(budget)} />)}
       </section>}
     </>}
 
-    {formTarget && <BudgetFormModal budget={formTarget === 'new' ? null : formTarget} period={period} categories={expenseCategories} defaultCurrency={user?.preferredCurrency ?? 'VND'} onClose={() => setFormTarget(null)} onSaved={() => { setFormTarget(null); void queryClient.invalidateQueries({ queryKey: ['budgets', period] }) }} />}
+    {formTarget && <BudgetFormModal budget={formTarget === 'new' ? null : formTarget} suggestion={formTarget === 'new' ? selectedSuggestion : null} period={period} categories={expenseCategories} defaultCurrency={user?.preferredCurrency ?? 'VND'} onClose={closeForm} onSaved={saved} />}
     {archiveTarget && <ConfirmArchiveModal budget={archiveTarget} isPending={archiveMutation.isPending} onCancel={() => setArchiveTarget(null)} onConfirm={() => archiveMutation.mutate(archiveTarget.id)} />}
   </>
+}
+
+function BudgetSuggestionPanel({ suggestions, isLoading, isError, onRetry, onUse }: { suggestions: BudgetLimitSuggestion[]; isLoading: boolean; isError: boolean; onRetry: () => void; onUse: (suggestion: BudgetLimitSuggestion) => void }) {
+  if (!isLoading && !isError && suggestions.length === 0) return null
+  return <section className="budget-suggestion-panel" aria-label="Gợi ý hạn mức ngân sách">
+    <header><div><span className="budget-suggestion-icon"><Sparkles /></span><div><strong>Gợi ý theo lịch sử chi tiêu</strong><p>Chỉ là mức tham khảo từ 3 tháng trước. Bạn vẫn tự kiểm tra và xác nhận trước khi tạo ngân sách.</p></div></div></header>
+    {isLoading && <div className="budget-suggestion-state"><LoaderCircle className="spin" /> Đang tính gợi ý</div>}
+    {isError && <div className="budget-suggestion-state">Chưa thể tải gợi ý.<button className="plain-button" onClick={onRetry}>Thử lại</button></div>}
+    {!isLoading && !isError && <div className="budget-suggestion-list">{suggestions.map((suggestion) => <div className="budget-suggestion-row" key={suggestion.categoryId}>
+      <div><strong>{suggestion.categoryName}</strong><small>{suggestion.reason} · Tổng đã chi {formatCurrency(suggestion.historicalExpenseTotal, suggestion.currency)}</small></div>
+      <div><strong>{formatCurrency(suggestion.suggestedLimit, suggestion.currency)}</strong><small>hạn mức gợi ý</small></div>
+      <button className="secondary-button" onClick={() => onUse(suggestion)}>Dùng gợi ý</button>
+    </div>)}</div>}
+  </section>
 }
 
 function BudgetCard({ budget, onEdit, onArchive }: { budget: Budget; onEdit: () => void; onArchive: () => void }) {
@@ -74,10 +103,10 @@ function BudgetCard({ budget, onEdit, onArchive }: { budget: Budget; onEdit: () 
   </article>
 }
 
-function BudgetFormModal({ budget, period, categories, defaultCurrency, onClose, onSaved }: { budget: Budget | null; period: string; categories: { id: string; name: string }[]; defaultCurrency: string; onClose: () => void; onSaved: () => void }) {
-  const [categoryId, setCategoryId] = useState(budget?.categoryId ?? '')
-  const [limitAmount, setLimitAmount] = useState(budget?.limitAmount.toString() ?? '')
-  const [currency, setCurrency] = useState(budget?.currency ?? defaultCurrency)
+function BudgetFormModal({ budget, suggestion, period, categories, defaultCurrency, onClose, onSaved }: { budget: Budget | null; suggestion: BudgetLimitSuggestion | null; period: string; categories: { id: string; name: string }[]; defaultCurrency: string; onClose: () => void; onSaved: () => void }) {
+  const [categoryId, setCategoryId] = useState(budget?.categoryId ?? suggestion?.categoryId ?? '')
+  const [limitAmount, setLimitAmount] = useState(budget?.limitAmount.toString() ?? suggestion?.suggestedLimit.toString() ?? '')
+  const [currency, setCurrency] = useState(budget?.currency ?? suggestion?.currency ?? defaultCurrency)
   const [warningThreshold, setWarningThreshold] = useState(budget?.warningThreshold.toString() ?? '80')
   const [error, setError] = useState('')
   const mutation = useMutation({
@@ -99,7 +128,7 @@ function BudgetFormModal({ budget, period, categories, defaultCurrency, onClose,
   })
   const submit = (event: FormEvent) => { event.preventDefault(); setError(''); mutation.mutate() }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="budget-form-title"><header><div><p className="eyebrow">KẾ HOẠCH CHI TIÊU</p><h2 id="budget-form-title">{budget ? 'Điều chỉnh ngân sách' : 'Thêm ngân sách'}</h2></div><button className="icon-button" onClick={onClose} aria-label="Đóng"><X /></button></header><form className="wallet-form" onSubmit={submit}>{error && <div className="form-alert" role="alert">{error}</div>}{!budget && <label><span>Danh mục chi</span><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} autoFocus><option value="">Chọn danh mục</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}<div className="form-row"><label><span>Hạn mức</span><input type="number" min="1" step="1" value={limitAmount} onChange={(event) => setLimitAmount(event.target.value)} placeholder="Ví dụ: 3000000" autoFocus={!!budget} /></label><label><span>Tiền tệ</span><input maxLength={3} disabled={!!budget} value={currency} onChange={(event) => setCurrency(event.target.value)} /></label></div><label><span>Cảnh báo khi dùng đến (%)</span><input type="number" min="1" max="100" step="1" value={warningThreshold} onChange={(event) => setWarningThreshold(event.target.value)} /></label><footer><button type="button" className="plain-button" onClick={onClose}>Hủy</button><button className="primary-button" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="spin" /> : budget ? 'Lưu thay đổi' : 'Tạo ngân sách'}</button></footer></form></section></div>
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="modal" role="dialog" aria-modal="true" aria-labelledby="budget-form-title"><header><div><p className="eyebrow">KẾ HOẠCH CHI TIÊU</p><h2 id="budget-form-title">{budget ? 'Điều chỉnh ngân sách' : 'Thêm ngân sách'}</h2></div><button className="icon-button" onClick={onClose} aria-label="Đóng"><X /></button></header><form className="wallet-form" onSubmit={submit}>{error && <div className="form-alert" role="alert">{error}</div>}{suggestion && <p className="budget-suggestion-note">Đã điền theo mức chi tiêu trung bình 3 tháng trước. Bạn có thể điều chỉnh trước khi lưu.</p>}{!budget && <label><span>Danh mục chi</span><select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} autoFocus><option value="">Chọn danh mục</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>}<div className="form-row"><label><span>Hạn mức</span><input type="number" min="1" step="1" value={limitAmount} onChange={(event) => setLimitAmount(event.target.value)} placeholder="Ví dụ: 3000000" autoFocus={!!budget} /></label><label><span>Tiền tệ</span><input maxLength={3} disabled={!!budget} value={currency} onChange={(event) => setCurrency(event.target.value)} /></label></div><label><span>Cảnh báo khi dùng đến (%)</span><input type="number" min="1" max="100" step="1" value={warningThreshold} onChange={(event) => setWarningThreshold(event.target.value)} /></label><footer><button type="button" className="plain-button" onClick={onClose}>Hủy</button><button className="primary-button" disabled={mutation.isPending}>{mutation.isPending ? <LoaderCircle className="spin" /> : budget ? 'Lưu thay đổi' : 'Tạo ngân sách'}</button></footer></form></section></div>
 }
 
 function ConfirmArchiveModal({ budget, isPending, onCancel, onConfirm }: { budget: Budget; isPending: boolean; onCancel: () => void; onConfirm: () => void }) {

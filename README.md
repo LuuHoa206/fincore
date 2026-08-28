@@ -149,6 +149,11 @@ income/expense recording backed by balanced ledger entries and idempotency keys.
 The dashboard is server-composed from these modules and transaction history is
 filtered and paginated by the API instead of a client-side sample.
 
+Monthly budgets can also surface explainable, read-only limit suggestions from
+the average posted spending of the preceding three months in the selected
+currency. A suggestion merely pre-fills the normal budget form: users retain
+the final review and creation step.
+
 Users can also review a selected month without editing financial facts: the
 monthly-review workspace combines reporting-derived per-currency totals and
 explainable insights with a private reflection and focus for the following
