@@ -128,11 +128,14 @@ cu the, khong phai ket luan gian lan.
   ghi tung dong hop le. Preview va confirm deu kiem tra lai toan bo file; dong
   trung duoc nhan ra bang idempotency key on dinh va bo qua an toan. Module nay
   khong ghi truc tiep vao transaction, ledger, hay wallet repository.
-- Module `reconciliation` la read-only va co controller, service rieng.
+- Module `reconciliation` co controller, service rieng. Preview van la
+  read-only; khi nguoi dung chu dong xac nhan dieu chinh, service chi kiem tra
+  quyen so huu vi va mui gio roi goi public `TransactionService`.
   `WalletReconciliationService` lay quyen so huu vi qua `WalletService`, mui
   gio qua `AuthService`, va tong but toan lich su qua public
   `WalletLedgerReportingService` cua module transaction. No khong co repository
-  rieng, khong tu tao adjustment, va khong cap nhat so du vi.
+  rieng va khong tu cap nhat so du vi; `TransactionService` khoa user/vi, tinh
+  lai chenh lech, ghi but toan kep va audit trong cung database transaction.
 - Quy tac giao dich dinh ky thuoc module `recurring`, co controller, service va
   repository rieng. Scheduler chi goi public service cua module nay; khi can ghi
   giao dich, `RecurringRuleExecutionService` goi `TransactionService` thay vi

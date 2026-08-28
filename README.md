@@ -209,5 +209,8 @@ stored as a separate document.
 
 Wallet reconciliation compares a statement closing balance with the ledger
 balance through the end of the selected day in the user's time zone. It reports
-the exact difference and number of included transactions, but never creates an
-automatic adjustment; financial corrections must remain explicit transactions.
+the exact difference and number of included transactions. A user may explicitly
+confirm a reasoned `ADJUSTMENT`; the server recalculates the difference while
+holding the financial write lock, records balanced ledger entries and an audit
+event, and rejects a matched statement or an idempotent retry without changing
+the wallet twice.

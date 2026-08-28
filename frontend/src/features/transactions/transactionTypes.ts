@@ -22,6 +22,7 @@ export type Transaction = {
   occurredAt: string
   postedAt: string
   reversedTransactionId: string | null
+  walletChange: number | null
 }
 
 export type CreateTransactionInput = {

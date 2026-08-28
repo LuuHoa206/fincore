@@ -14,6 +14,7 @@ import com.luuhoa.fincore.identity.AuthService;
 import com.luuhoa.fincore.identity.UserResponse;
 import com.luuhoa.fincore.transaction.WalletLedgerReportingService;
 import com.luuhoa.fincore.transaction.WalletLedgerReportingService.WalletLedgerSnapshot;
+import com.luuhoa.fincore.transaction.TransactionService;
 import com.luuhoa.fincore.wallet.WalletResponse;
 import com.luuhoa.fincore.wallet.WalletService;
 import com.luuhoa.fincore.wallet.WalletType;
@@ -30,12 +31,13 @@ class WalletReconciliationServiceTest {
     @Mock private AuthService authService;
     @Mock private WalletService walletService;
     @Mock private WalletLedgerReportingService walletLedgerReportingService;
+    @Mock private TransactionService transactionService;
 
     private WalletReconciliationService service;
 
     @BeforeEach
     void setUp() {
-        service = new WalletReconciliationService(authService, walletService, walletLedgerReportingService);
+        service = new WalletReconciliationService(authService, walletService, walletLedgerReportingService, transactionService);
     }
 
     @Test
@@ -73,6 +75,27 @@ class WalletReconciliationServiceTest {
         assertThat(preview.difference()).isEqualByComparingTo("100000");
         assertThat(preview.ledgerBalance()).isEqualByComparingTo("900000");
         assertThat(preview.statementBalance()).isEqualByComparingTo("1000000");
+    }
+
+    @Test
+    void delegatesAConfirmedAdjustmentWithTheUserLocalStatementCutoff() {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        when(authService.currentUser(userId)).thenReturn(user(userId));
+        when(walletService.get(userId, walletId)).thenReturn(wallet(walletId));
+
+        service.confirmAdjustment(userId,
+                new WalletReconciliationAdjustmentRequest(walletId, LocalDate.of(2026, 8, 26),
+                        new BigDecimal("1250000"), "Khớp số dư cuối ngày trên sao kê"),
+                "reconciliation-26-08-2026");
+
+        org.mockito.ArgumentCaptor<com.luuhoa.fincore.transaction.ReconciliationAdjustmentCommand> command =
+                org.mockito.ArgumentCaptor.forClass(com.luuhoa.fincore.transaction.ReconciliationAdjustmentCommand.class);
+        verify(transactionService).createReconciliationAdjustment(
+                org.mockito.ArgumentMatchers.eq(userId), command.capture(),
+                org.mockito.ArgumentMatchers.eq("reconciliation-26-08-2026"));
+        assertThat(command.getValue().endExclusive()).isEqualTo(Instant.parse("2026-08-26T17:00:00Z"));
+        assertThat(command.getValue().reason()).isEqualTo("Khớp số dư cuối ngày trên sao kê");
     }
 
     private UserResponse user(UUID userId) {

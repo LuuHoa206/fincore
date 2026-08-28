@@ -11,10 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.UUID;
 
 import com.luuhoa.fincore.config.SecurityConfig;
 import com.luuhoa.fincore.shared.api.GlobalExceptionHandler;
+import com.luuhoa.fincore.transaction.TransactionResponse;
+import com.luuhoa.fincore.transaction.TransactionStatus;
+import com.luuhoa.fincore.transaction.TransactionType;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,5 +56,31 @@ class WalletReconciliationControllerWebTest {
                 .andExpect(jsonPath("$.difference").value(100000));
 
         verify(walletReconciliationService).preview(eq(userId), any(WalletReconciliationRequest.class));
+    }
+
+    @Test
+    void confirmsAnAdjustmentWithAnIdempotencyKey() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        when(walletReconciliationService.confirmAdjustment(eq(userId), any(), eq("adjustment-key")))
+                .thenReturn(new TransactionResponse(transactionId, walletId, "Main", null, null, null, null,
+                        null, null, TransactionType.ADJUSTMENT, TransactionStatus.POSTED,
+                        new BigDecimal("100000"), "VND", "Điều chỉnh theo đối soát sao kê", "Xác nhận sao kê",
+                        Instant.parse("2026-08-26T16:59:59.999999999Z"), Instant.now(), null));
+
+        mockMvc.perform(post("/api/v1/wallet-reconciliations/adjustments")
+                        .header("Idempotency-Key", "adjustment-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"walletId":"%s","statementDate":"2026-08-26","statementBalance":1000000,"reason":"Xác nhận sao kê"}
+                                """.formatted(walletId))
+                        .with(jwt().jwt(token -> token.subject(userId.toString()))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(transactionId.toString()))
+                .andExpect(jsonPath("$.transactionType").value("ADJUSTMENT"));
+
+        verify(walletReconciliationService).confirmAdjustment(
+                eq(userId), any(WalletReconciliationAdjustmentRequest.class), eq("adjustment-key"));
     }
 }

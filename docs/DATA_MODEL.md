@@ -103,3 +103,12 @@ entries are generated from `financial_transactions` with status `POSTED` and
 enabled `recurring_transaction_rules`. This keeps the calendar consistent with
 the ledger and rule schedule, without copying monetary facts into another
 mutable data store.
+
+## Statement reconciliation adjustments
+
+Reconciliation preview remains a derived read model and has no table. A user
+confirmed difference is persisted only as a normal `financial_transactions`
+row with type `ADJUSTMENT`, its two balanced `ledger_entries`, and one audit
+record. The statement date and amount that caused the correction are retained
+in the audit details; no raw statement document or separate mutable
+reconciliation balance is stored.

@@ -306,6 +306,99 @@ class TransactionServiceTest {
         verify(transactionRepository, never()).searchByUser(any(), any(), any(), any(), any(), any());
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    void recordsARecomputedStatementDifferenceAsASeparateBalancedAdjustment() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Main", WalletType.BANK, "VND", false);
+        setId(wallet, walletId);
+        wallet.applyBalance(new BigDecimal("900000"));
+        LedgerEntryRepository.WalletLedgerBalance summary = org.mockito.Mockito.mock(LedgerEntryRepository.WalletLedgerBalance.class);
+        when(summary.getBalance()).thenReturn(new BigDecimal("900000"));
+        when(transactionRepository.findByUserIdAndIdempotencyKey(userId, "statement-adjustment-1"))
+                .thenReturn(Optional.empty());
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
+        when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
+        when(ledgerEntryRepository.summarizeWalletBalanceUntil(userId, walletId, Instant.parse("2026-08-26T17:00:00Z")))
+                .thenReturn(summary);
+
+        TransactionResponse response = service.createReconciliationAdjustment(userId,
+                new ReconciliationAdjustmentCommand(walletId, java.time.LocalDate.of(2026, 8, 26),
+                        new BigDecimal("1000000"), Instant.parse("2026-08-26T17:00:00Z"), "Đã kiểm tra sao kê"),
+                "statement-adjustment-1");
+
+        assertThat(response.transactionType()).isEqualTo(TransactionType.ADJUSTMENT);
+        assertThat(response.walletChange()).isEqualByComparingTo("100000");
+        assertThat(wallet.getCurrentBalance()).isEqualByComparingTo("1000000");
+        ArgumentCaptor<List<LedgerEntry>> entries = ArgumentCaptor.forClass(List.class);
+        verify(ledgerEntryRepository).saveAll(entries.capture());
+        assertThat(entries.getValue()).extracting(LedgerEntry::getSignedAmount)
+                .containsExactlyInAnyOrder(new BigDecimal("100000"), new BigDecimal("-100000"));
+        verify(auditLogService).record(org.mockito.ArgumentMatchers.eq(user),
+                org.mockito.ArgumentMatchers.eq("WALLET_RECONCILIATION_ADJUSTED"),
+                org.mockito.ArgumentMatchers.eq("TRANSACTION"), any(), any());
+    }
+
+    @Test
+    void rejectsAnAdjustmentWhenTheStatementAlreadyMatchesTheLedger() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Main", WalletType.BANK, "VND", false);
+        setId(wallet, walletId);
+        LedgerEntryRepository.WalletLedgerBalance summary = org.mockito.Mockito.mock(LedgerEntryRepository.WalletLedgerBalance.class);
+        when(summary.getBalance()).thenReturn(new BigDecimal("1000000"));
+        when(transactionRepository.findByUserIdAndIdempotencyKey(userId, "matched-adjustment"))
+                .thenReturn(Optional.empty());
+        when(userRepository.findByIdForFinancialWrite(userId)).thenReturn(Optional.of(user));
+        when(walletService.requireOwnedWalletForTransaction(userId, walletId)).thenReturn(wallet);
+        when(ledgerEntryRepository.summarizeWalletBalanceUntil(userId, walletId, Instant.parse("2026-08-26T17:00:00Z")))
+                .thenReturn(summary);
+
+        assertThatThrownBy(() -> service.createReconciliationAdjustment(userId,
+                new ReconciliationAdjustmentCommand(walletId, java.time.LocalDate.of(2026, 8, 26),
+                        new BigDecimal("1000000"), Instant.parse("2026-08-26T17:00:00Z"), "Đã kiểm tra sao kê"),
+                "matched-adjustment"))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("already matches");
+
+        verify(transactionRepository, never()).save(any());
+        verify(ledgerEntryRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void returnsTheExistingAdjustmentWhenTheConfirmationIsRetried() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID walletId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        UserAccount user = user();
+        Wallet wallet = new Wallet(user, "Main", WalletType.BANK, "VND", false);
+        setId(wallet, walletId);
+        FinancialTransaction existing = new FinancialTransaction(
+                user, null, TransactionType.ADJUSTMENT, new BigDecimal("100000"), "VND",
+                "Điều chỉnh theo đối soát sao kê", "Đã kiểm tra sao kê",
+                Instant.parse("2026-08-26T16:59:59.999999999Z"), "retry-adjustment");
+        setId(existing, transactionId);
+        LedgerEntry entry = LedgerEntry.walletEntry(existing, wallet, new BigDecimal("100000"));
+        when(transactionRepository.findByUserIdAndIdempotencyKey(userId, "retry-adjustment"))
+                .thenReturn(Optional.of(existing));
+        when(ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transactionId, AccountKind.WALLET))
+                .thenReturn(List.of(entry));
+
+        TransactionResponse response = service.createReconciliationAdjustment(userId,
+                new ReconciliationAdjustmentCommand(walletId, java.time.LocalDate.of(2026, 8, 26),
+                        new BigDecimal("1000000"), Instant.parse("2026-08-26T17:00:00Z"), "Đã kiểm tra sao kê"),
+                "retry-adjustment");
+
+        assertThat(response.id()).isEqualTo(transactionId);
+        verify(userRepository, never()).findByIdForFinancialWrite(any());
+        verify(walletService, never()).requireOwnedWalletForTransaction(any(), any());
+        verify(ledgerEntryRepository, never()).saveAll(any());
+        verify(transactionRepository, never()).save(any());
+    }
+
     private UserAccount user() {
         return new UserAccount(
                 "owner@example.com",
