@@ -9,8 +9,10 @@ import java.time.temporal.ChronoUnit;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.moneyjar.MoneyJar;
@@ -30,14 +32,17 @@ public class SavingGoalService {
     private final SavingGoalRepository savingGoalRepository;
     private final UserAccountRepository userRepository;
     private final MoneyJarService moneyJarService;
+    private final AuditLogService auditLogService;
 
     public SavingGoalService(
             SavingGoalRepository savingGoalRepository,
             UserAccountRepository userRepository,
-            MoneyJarService moneyJarService) {
+            MoneyJarService moneyJarService,
+            AuditLogService auditLogService) {
         this.savingGoalRepository = savingGoalRepository;
         this.userRepository = userRepository;
         this.moneyJarService = moneyJarService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -61,32 +66,38 @@ public class SavingGoalService {
                 normalizeName(request.name()),
                 normalizeAmount(request.targetAmount(), jar.getCurrency()),
                 request.targetDate());
+        SavingGoal savedGoal;
         try {
-            SavingGoal savedGoal = savingGoalRepository.saveAndFlush(goal);
-            return toResponse(savedGoal, ZoneId.of(user.getTimeZone()));
+            savedGoal = savingGoalRepository.saveAndFlush(goal);
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("JAR_ALREADY_HAS_SAVING_GOAL", "This money jar already has an active saving goal");
         }
+        auditLogService.record(user, "SAVING_GOAL_CREATED", "SAVING_GOAL", savedGoal.getId(), goalDetails(savedGoal));
+        return toResponse(savedGoal, ZoneId.of(user.getTimeZone()));
     }
 
     @Transactional
     public SavingGoalResponse update(UUID userId, UUID goalId, UpdateSavingGoalRequest request) {
         SavingGoal goal = requireOwnedGoal(userId, goalId);
+        UserAccount user = requireUser(userId);
         goal.updateDetails(
                 request.name() == null ? null : normalizeName(request.name()),
                 request.targetAmount() == null ? null : normalizeAmount(request.targetAmount(), goal.getJar().getCurrency()),
                 request.targetDate());
-        return toResponse(goal, ZoneId.of(requireUser(userId).getTimeZone()));
+        auditLogService.record(user, "SAVING_GOAL_UPDATED", "SAVING_GOAL", goal.getId(), goalDetails(goal));
+        return toResponse(goal, ZoneId.of(user.getTimeZone()));
     }
 
     @Transactional
     public SavingGoalResponse changeStatus(UUID userId, UUID goalId, ChangeSavingGoalStatusRequest request) {
         SavingGoal goal = requireOwnedGoal(userId, goalId);
+        UserAccount user = requireUser(userId);
         if (request.status() == SavingGoalStatus.COMPLETED) {
             throw new IllegalArgumentException("Completed status is calculated from the money jar balance");
         }
         goal.changeStatus(request.status());
-        return toResponse(goal, ZoneId.of(requireUser(userId).getTimeZone()));
+        auditLogService.record(user, "SAVING_GOAL_STATUS_CHANGED", "SAVING_GOAL", goal.getId(), goalDetails(goal));
+        return toResponse(goal, ZoneId.of(user.getTimeZone()));
     }
 
     private SavingGoal requireOwnedGoal(UUID userId, UUID goalId) {
@@ -97,6 +108,18 @@ public class SavingGoalService {
     private UserAccount requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private Map<String, Object> goalDetails(SavingGoal goal) {
+        Map<String, Object> details = new java.util.LinkedHashMap<>();
+        details.put("name", goal.getName());
+        details.put("currency", goal.getJar().getCurrency());
+        details.put("targetAmount", goal.getTargetAmount().toPlainString());
+        details.put("status", goal.getStatus().name());
+        if (goal.getTargetDate() != null) {
+            details.put("targetDate", goal.getTargetDate().toString());
+        }
+        return details;
     }
 
     private SavingGoalResponse toResponse(SavingGoal goal, ZoneId zoneId) {

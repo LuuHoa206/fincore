@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.transaction.FinancialTransaction;
@@ -26,16 +27,19 @@ public class MoneyJarService {
     private final JarMovementRepository jarMovementRepository;
     private final WalletService walletService;
     private final UserAccountRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public MoneyJarService(
             MoneyJarRepository moneyJarRepository,
             JarMovementRepository jarMovementRepository,
             WalletService walletService,
-            UserAccountRepository userRepository) {
+            UserAccountRepository userRepository,
+            AuditLogService auditLogService) {
         this.moneyJarRepository = moneyJarRepository;
         this.jarMovementRepository = jarMovementRepository;
         this.walletService = walletService;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -62,16 +66,20 @@ public class MoneyJarService {
                 normalizeOptional(request.color()),
                 normalizeOptional(request.icon()),
                 request.allowNegative());
+        MoneyJar saved;
         try {
-            return MoneyJarResponse.from(moneyJarRepository.saveAndFlush(jar));
+            saved = moneyJarRepository.saveAndFlush(jar);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateJar();
         }
+        auditLogService.record(user, "MONEY_JAR_CREATED", "MONEY_JAR", saved.getId(), jarDetails(saved));
+        return MoneyJarResponse.from(saved);
     }
 
     @Transactional
     public MoneyJarResponse update(UUID userId, UUID jarId, UpdateMoneyJarRequest request) {
         MoneyJar jar = requireOwnedActiveJar(userId, jarId);
+        UserAccount user = requireUser(userId);
         String name = request.name() == null ? null : normalizeName(request.name());
         if (name != null && !jar.getName().equalsIgnoreCase(name)
                 && moneyJarRepository.existsByUserIdAndNameIgnoreCase(userId, name)) {
@@ -85,10 +93,11 @@ public class MoneyJarService {
                 request.allowNegative());
         try {
             moneyJarRepository.flush();
-            return MoneyJarResponse.from(jar);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateJar();
         }
+        auditLogService.record(user, "MONEY_JAR_UPDATED", "MONEY_JAR", jar.getId(), jarDetails(jar));
+        return MoneyJarResponse.from(jar);
     }
 
     @Transactional
@@ -100,6 +109,7 @@ public class MoneyJarService {
                     "Release the allocated money before archiving this jar");
         }
         jar.archive();
+        auditLogService.record(requireUser(userId), "MONEY_JAR_ARCHIVED", "MONEY_JAR", jar.getId(), jarDetails(jar));
     }
 
     @Transactional
@@ -111,6 +121,8 @@ public class MoneyJarService {
         }
         context.jar().applyAllocation(amount);
         jarMovementRepository.save(JarMovement.allocation(context.jar(), amount));
+        auditLogService.record(requireUser(userId), "MONEY_JAR_ALLOCATION_ADDED", "MONEY_JAR", context.jar().getId(),
+                Map.of("amount", amount.toPlainString(), "currency", context.jar().getCurrency()));
         return new JarAllocationResponse(
                 MoneyJarResponse.from(context.jar()),
                 context.availableToAllocate().subtract(amount));
@@ -122,6 +134,8 @@ public class MoneyJarService {
         BigDecimal amount = normalizeAmount(request.amount(), context.jar().getCurrency());
         context.jar().applyAllocation(amount.negate());
         jarMovementRepository.save(JarMovement.release(context.jar(), amount));
+        auditLogService.record(requireUser(userId), "MONEY_JAR_ALLOCATION_RELEASED", "MONEY_JAR", context.jar().getId(),
+                Map.of("amount", amount.toPlainString(), "currency", context.jar().getCurrency()));
         return new JarAllocationResponse(
                 MoneyJarResponse.from(context.jar()),
                 context.availableToAllocate().add(amount));
@@ -186,6 +200,22 @@ public class MoneyJarService {
     private MoneyJar requireOwnedActiveJar(UUID userId, UUID jarId) {
         return moneyJarRepository.findByIdAndUserIdAndArchivedFalse(jarId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("MONEY_JAR_NOT_FOUND", "Money jar was not found"));
+    }
+
+    private UserAccount requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private Map<String, Object> jarDetails(MoneyJar jar) {
+        Map<String, Object> details = new java.util.LinkedHashMap<>();
+        details.put("name", jar.getName());
+        details.put("currency", jar.getCurrency());
+        details.put("allowNegative", jar.isAllowNegative());
+        if (jar.getSpendingLimit() != null) {
+            details.put("spendingLimit", jar.getSpendingLimit().toPlainString());
+        }
+        return details;
     }
 
     private BigDecimal normalizeAmount(BigDecimal requestedAmount, String currencyCode) {

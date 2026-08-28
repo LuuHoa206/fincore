@@ -3,6 +3,8 @@ package com.luuhoa.fincore.savinggoal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.moneyjar.MoneyJar;
 import com.luuhoa.fincore.moneyjar.MoneyJarService;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -38,11 +41,14 @@ class SavingGoalServiceTest {
     @Mock
     private MoneyJarService moneyJarService;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private SavingGoalService service;
 
     @BeforeEach
     void setUp() {
-        service = new SavingGoalService(savingGoalRepository, userRepository, moneyJarService);
+        service = new SavingGoalService(savingGoalRepository, userRepository, moneyJarService, auditLogService);
     }
 
     @Test
@@ -82,6 +88,30 @@ class SavingGoalServiceTest {
                 .hasMessageContaining("already has an active saving goal");
 
         verify(userRepository, never()).findById(any());
+    }
+
+    @Test
+    void recordsCreationOnlyAfterTheSavingGoalIsPersisted() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID jarId = UUID.randomUUID();
+        UUID goalId = UUID.randomUUID();
+        UserAccount user = user();
+        MoneyJar jar = jar(user, BigDecimal.ZERO);
+        setId(jar, jarId);
+        SavingGoal goal = new SavingGoal(user, jar, "Emergency fund", new BigDecimal("3000000"), LocalDate.of(2026, 12, 31));
+        setId(goal, goalId);
+        CreateSavingGoalRequest request = new CreateSavingGoalRequest(jarId, "Emergency fund", new BigDecimal("3000000"), LocalDate.of(2026, 12, 31));
+
+        when(moneyJarService.requireOwnedActiveJarForSavingGoal(userId, jarId)).thenReturn(jar);
+        when(savingGoalRepository.existsByUserIdAndJarIdAndStatusIn(userId, jarId, List.of(SavingGoalStatus.ACTIVE, SavingGoalStatus.PAUSED)))
+                .thenReturn(false);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(savingGoalRepository.saveAndFlush(any(SavingGoal.class))).thenReturn(goal);
+
+        SavingGoalResponse response = service.create(userId, request);
+
+        assertThat(response.id()).isEqualTo(goalId);
+        verify(auditLogService).record(eq(user), eq("SAVING_GOAL_CREATED"), eq("SAVING_GOAL"), eq(goalId), anyMap());
     }
 
     private UserAccount user() {
