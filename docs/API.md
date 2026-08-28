@@ -105,7 +105,8 @@ time it was recorded. The current coverage includes account registration,
 successful password logins, profile updates, wallet and category changes,
 money-jar, saving-goal, monthly-budget, and income-allocation-rule changes,
 recurring-rule changes, manual money-jar allocations/releases, new income or
-expense transactions, wallet transfers, and transaction reversals.
+expense transactions, split-bill creation and reimbursements, wallet transfers,
+and transaction reversals.
 Audit records are written inside the business transaction so a failed financial
 write cannot leave a misleading activity record behind.
 

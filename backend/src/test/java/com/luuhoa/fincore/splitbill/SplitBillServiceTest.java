@@ -3,6 +3,8 @@ package com.luuhoa.fincore.splitbill;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -16,6 +18,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.transaction.TransactionResponse;
 import com.luuhoa.fincore.transaction.TransactionService;
@@ -36,12 +39,13 @@ class SplitBillServiceTest {
     @Mock private SplitBillPaymentRepository splitBillPaymentRepository;
     @Mock private UserAccountRepository userRepository;
     @Mock private TransactionService transactionService;
+    @Mock private AuditLogService auditLogService;
 
     private SplitBillService service;
 
     @BeforeEach
     void setUp() {
-        service = new SplitBillService(splitBillRepository, splitBillPaymentRepository, userRepository, transactionService);
+        service = new SplitBillService(splitBillRepository, splitBillPaymentRepository, userRepository, transactionService, auditLogService);
     }
 
     @Test
@@ -80,6 +84,7 @@ class SplitBillServiceTest {
         verify(transactionService).create(org.mockito.ArgumentMatchers.eq(userId), transactionRequest.capture(), org.mockito.ArgumentMatchers.eq("split-bill-1"));
         assertThat(transactionRequest.getValue().transactionType()).isEqualTo(TransactionType.EXPENSE);
         assertThat(transactionRequest.getValue().amount()).isEqualByComparingTo("900000");
+        verify(auditLogService).record(eq(user), eq("SPLIT_BILL_CREATED"), eq("SPLIT_BILL"), any(), anyMap());
     }
 
     @Test
@@ -111,6 +116,7 @@ class SplitBillServiceTest {
         when(transactionService.create(any(), any(), any())).thenReturn(reimbursement);
         when(splitBillPaymentRepository.findByTransactionId(transactionId)).thenReturn(Optional.empty());
         when(splitBillPaymentRepository.findAllByBillId(billId)).thenReturn(List.of());
+        when(userRepository.findById(userId)).thenReturn(Optional.of(bill.getUser()));
 
         SplitBillResponse response = service.recordPayment(userId, billId, participantId, request, "split-payment-1");
 
@@ -122,6 +128,7 @@ class SplitBillServiceTest {
             assertThat(participant.outstandingAmount()).isEqualByComparingTo("200000");
         });
         verify(splitBillPaymentRepository).save(any(SplitBillPayment.class));
+        verify(auditLogService).record(eq(bill.getUser()), eq("SPLIT_BILL_PAYMENT_RECORDED"), eq("SPLIT_BILL"), eq(billId), anyMap());
     }
 
     @Test
@@ -166,6 +173,7 @@ class SplitBillServiceTest {
         assertThat(response.settledAmount()).isEqualByComparingTo("100000");
         assertThat(response.outstandingAmount()).isEqualByComparingTo("200000");
         verify(splitBillPaymentRepository, never()).save(any(SplitBillPayment.class));
+        verify(auditLogService, never()).record(any(), any(), any(), any(), any());
     }
 
     private SplitBill bill(UUID userId, UUID billId, UUID participantId, BigDecimal participantAmount) throws Exception {
