@@ -102,8 +102,8 @@ control mechanism.
 
 Each item includes the action, affected entity, a safe details object, and the
 time it was recorded. The current coverage includes account registration,
-successful password logins, profile updates, new income or expense
-transactions, wallet transfers, and transaction reversals.
+successful password logins, profile updates, wallet and category changes, new
+income or expense transactions, wallet transfers, and transaction reversals.
 Audit records are written inside the business transaction so a failed financial
 write cannot leave a misleading activity record behind.
 

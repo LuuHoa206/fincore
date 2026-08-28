@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.shared.api.ConflictException;
 
@@ -32,11 +33,14 @@ class WalletServiceTest {
     @Mock
     private UserAccountRepository userRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private WalletService service;
 
     @BeforeEach
     void setUp() {
-        service = new WalletService(walletRepository, userRepository);
+        service = new WalletService(walletRepository, userRepository, auditLogService);
     }
 
     @Test
@@ -58,6 +62,7 @@ class WalletServiceTest {
 
         assertThat(response.currency()).isEqualTo("VND");
         assertThat(response.currentBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+        verify(auditLogService).record(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.eq("WALLET_CREATED"), org.mockito.ArgumentMatchers.eq("WALLET"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.anyMap());
     }
 
     @Test

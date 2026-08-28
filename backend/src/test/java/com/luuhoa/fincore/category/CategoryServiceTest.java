@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.shared.api.ConflictException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,11 +31,14 @@ class CategoryServiceTest {
     @Mock
     private UserAccountRepository userRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private CategoryService service;
 
     @BeforeEach
     void setUp() {
-        service = new CategoryService(categoryRepository, userRepository);
+        service = new CategoryService(categoryRepository, userRepository, auditLogService);
     }
 
     @Test
@@ -66,6 +70,22 @@ class CategoryServiceTest {
 
         verify(userRepository, never()).findById(any());
         verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void recordsAuditWhenCreatingACustomCategory() {
+        UUID userId = UUID.randomUUID();
+        UserAccount user = user();
+        CreateCategoryRequest request = new CreateCategoryRequest("Transport", CategoryType.EXPENSE, "car", "#2563EB");
+        when(categoryRepository.existsByUserIdAndNameIgnoreCaseAndCategoryType(userId, "Transport", CategoryType.EXPENSE))
+                .thenReturn(false);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(categoryRepository.save(any(Category.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CategoryResponse response = service.create(userId, request);
+
+        assertThat(response.name()).isEqualTo("Transport");
+        verify(auditLogService).record(org.mockito.ArgumentMatchers.eq(user), org.mockito.ArgumentMatchers.eq("CATEGORY_CREATED"), org.mockito.ArgumentMatchers.eq("CATEGORY"), org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.anyMap());
     }
 
     @Test
