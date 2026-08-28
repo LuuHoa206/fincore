@@ -23,9 +23,13 @@ import com.luuhoa.fincore.wallet.WalletService;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class RecurringRuleService {
+
+    private static final Logger log = LoggerFactory.getLogger(RecurringRuleService.class);
 
     private final RecurringRuleRepository recurringRuleRepository;
     private final UserAccountRepository userRepository;
@@ -114,9 +118,18 @@ public class RecurringRuleService {
     }
 
     public int processDueAutoRecords(Instant now) {
-        return recurringRuleRepository.findDueAutoRecordIds(now).stream()
-                .mapToInt(ruleId -> executionService.autoRecordDueRule(ruleId, now) ? 1 : 0)
-                .sum();
+        int processedCount = 0;
+        for (UUID ruleId : recurringRuleRepository.findDueAutoRecordIds(now)) {
+            try {
+                if (executionService.autoRecordDueRule(ruleId, now)) {
+                    processedCount++;
+                }
+            } catch (RuntimeException exception) {
+                log.error("recurring_rule_auto_record_failed rule_id={} error_type={}",
+                        ruleId, exception.getClass().getSimpleName());
+            }
+        }
+        return processedCount;
     }
 
     private RecurringRule createRule(UserAccount user, UUID userId, CreateRecurringRuleRequest request) {

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -96,6 +97,23 @@ class RecurringRuleServiceTest {
 
         assertThat(response.id()).isEqualTo(ruleId);
         verify(auditLogService).record(eq(user), eq("RECURRING_RULE_CREATED"), eq("RECURRING_RULE"), eq(ruleId), anyMap());
+    }
+
+    @Test
+    void continuesProcessingOtherDueRulesWhenOneAutoRecordFails() {
+        UUID failedRuleId = UUID.randomUUID();
+        UUID processedRuleId = UUID.randomUUID();
+        Instant now = Instant.parse("2026-08-28T10:00:00Z");
+        when(recurringRuleRepository.findDueAutoRecordIds(now)).thenReturn(List.of(failedRuleId, processedRuleId));
+        doThrow(new IllegalStateException("wallet is unavailable"))
+                .when(executionService).autoRecordDueRule(failedRuleId, now);
+        when(executionService.autoRecordDueRule(processedRuleId, now)).thenReturn(true);
+
+        int processedCount = service().processDueAutoRecords(now);
+
+        assertThat(processedCount).isEqualTo(1);
+        verify(executionService).autoRecordDueRule(failedRuleId, now);
+        verify(executionService).autoRecordDueRule(processedRuleId, now);
     }
 
     private RecurringRuleService service() {
