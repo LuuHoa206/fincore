@@ -1,4 +1,4 @@
-import { ArrowLeftRight, CalendarClock, ChartNoAxesCombined, CircleDollarSign, History, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Tag, Target, UsersRound, WalletCards, X } from 'lucide-react'
+import { ArrowLeftRight, BellRing, CalendarClock, ChartNoAxesCombined, CircleDollarSign, History, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Tag, Target, UsersRound, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
@@ -28,6 +28,7 @@ export function AppLayout() {
           <NavLink to="/categories" onClick={() => setMobileNavOpen(false)}><Tag /> Danh mục</NavLink>
           <NavLink to="/transactions" onClick={() => setMobileNavOpen(false)}><ArrowLeftRight /> Giao dịch</NavLink>
           <NavLink to="/activity" onClick={() => setMobileNavOpen(false)}><History /> Lịch sử hoạt động</NavLink>
+          <NavLink to="/notifications" onClick={() => setMobileNavOpen(false)}><BellRing /> Nhắc việc</NavLink>
           <NavLink to="/recurring" onClick={() => setMobileNavOpen(false)}><CalendarClock /> Giao dịch định kỳ</NavLink>
           <NavLink to="/split-bills" onClick={() => setMobileNavOpen(false)}><UsersRound /> Chia hóa đơn</NavLink>
           <NavLink to="/budgets" onClick={() => setMobileNavOpen(false)}><ChartNoAxesCombined /> Ngân sách</NavLink>

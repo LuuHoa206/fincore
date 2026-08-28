@@ -140,6 +140,11 @@ cu the, khong phai ket luan gian lan.
   `TransactionReversalGuard` la extension point cua module transaction; module
   split bill dung no de chan hoan tac truc tiep giao dich da lien ket, tranh so
   cai va cong no bi lech nhau.
+- Module `notification` chi tong hop nhac viec tu public service cua `recurring`
+  va `budget`; no khong doc repository noi bo cua hai module nay. Bang
+  `notification_read_states` chi luu tuy chon da doc theo nguoi dung va key cua
+  canh bao hien tai. Doc mot thong bao khong the tao giao dich, thay doi ngan
+  sach hay tu dong ghi nhan ky dinh ky.
 
 ## Quy tac lien module
 

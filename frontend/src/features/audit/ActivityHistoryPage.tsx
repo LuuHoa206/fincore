@@ -1,4 +1,4 @@
-import { ArrowLeftRight, CircleAlert, History, LoaderCircle, RotateCcw, UserRound } from 'lucide-react'
+import { ArrowLeftRight, Check, CircleAlert, History, LoaderCircle, RotateCcw, UserRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { getApiErrorMessage } from '../../shared/api/apiError'
 import { formatCurrency, formatDateTime } from '../transactions/transactionFormatters'
@@ -38,6 +38,7 @@ const activityCopy: Record<string, { title: string; description: string; icon: t
   TRANSACTION_CREATED: { title: 'Đã ghi nhận giao dịch', description: 'Khoản thu hoặc chi mới', icon: ArrowLeftRight },
   TRANSFER_CREATED: { title: 'Đã chuyển tiền giữa các ví', description: 'Số dư ví đã được cập nhật', icon: ArrowLeftRight },
   TRANSACTION_REVERSED: { title: 'Đã hoàn tác giao dịch', description: 'Giao dịch gốc được đánh dấu hoàn tác', icon: RotateCcw },
+  NOTIFICATION_MARKED_READ: { title: 'Đã đọc nhắc việc', description: 'Một nhắc việc tài chính đã được đánh dấu đã đọc', icon: Check },
 }
 
 function formatDetails(activity: ActivityLog) {
