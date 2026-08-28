@@ -71,6 +71,14 @@ npm run lint
 npm run build
 ```
 
+Khi Docker Desktop có sẵn, kiểm tra thêm hợp đồng Compose trước khi bàn giao
+một bản release. Lệnh này chỉ render cấu hình, không khởi động hay thay đổi dữ
+liệu:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml config --quiet
+```
+
 When Docker Desktop is available, also execute the PostgreSQL/Flyway integration
 suite documented in the root README.
 
