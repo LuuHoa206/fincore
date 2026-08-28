@@ -32,6 +32,8 @@ const activityCopy: Record<string, { title: string; description: string; icon: t
   RECURRING_RULE_CREATED: { title: 'Đã tạo lịch thu chi', description: 'Một giao dịch định kỳ mới đã được thêm', icon: History },
   RECURRING_RULE_UPDATED: { title: 'Đã cập nhật lịch thu chi', description: 'Thiết lập giao dịch định kỳ đã thay đổi', icon: History },
   RECURRING_RULE_DISABLED: { title: 'Đã tắt lịch thu chi', description: 'Giao dịch định kỳ sẽ không còn tự ghi nhận', icon: History },
+  SPLIT_BILL_CREATED: { title: 'Đã tạo hóa đơn chia tiền', description: 'Khoản cần hoàn từ mọi người đang được theo dõi', icon: ArrowLeftRight },
+  SPLIT_BILL_PAYMENT_RECORDED: { title: 'Đã ghi nhận khoản hoàn tiền', description: 'Số tiền cần thu của hóa đơn đã được cập nhật', icon: ArrowLeftRight },
   TRANSACTION_CREATED: { title: 'Đã ghi nhận giao dịch', description: 'Khoản thu hoặc chi mới', icon: ArrowLeftRight },
   TRANSFER_CREATED: { title: 'Đã chuyển tiền giữa các ví', description: 'Số dư ví đã được cập nhật', icon: ArrowLeftRight },
   TRANSACTION_REVERSED: { title: 'Đã hoàn tác giao dịch', description: 'Giao dịch gốc được đánh dấu hoàn tác', icon: RotateCcw },

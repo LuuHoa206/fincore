@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -26,16 +28,19 @@ public class SplitBillService {
     private final SplitBillPaymentRepository splitBillPaymentRepository;
     private final UserAccountRepository userRepository;
     private final TransactionService transactionService;
+    private final AuditLogService auditLogService;
 
     public SplitBillService(
             SplitBillRepository splitBillRepository,
             SplitBillPaymentRepository splitBillPaymentRepository,
             UserAccountRepository userRepository,
-            TransactionService transactionService) {
+            TransactionService transactionService,
+            AuditLogService auditLogService) {
         this.splitBillRepository = splitBillRepository;
         this.splitBillPaymentRepository = splitBillPaymentRepository;
         this.userRepository = userRepository;
         this.transactionService = transactionService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -89,8 +94,9 @@ public class SplitBillService {
             throw new IllegalArgumentException("Your share and all participant shares must equal the total bill amount");
         }
 
+        UserAccount user = requireUser(userId);
         SplitBill bill = new SplitBill(
-                requireUser(userId),
+                user,
                 expense.id(),
                 normalizeRequired(request.name(), "Bill name"),
                 total,
@@ -104,7 +110,9 @@ public class SplitBillService {
                 normalizeOptional(participant.contact()),
                 normalizePositiveAmount(participant.owedAmount(), currency)));
         bill.refreshStatus();
-        return toResponse(splitBillRepository.save(bill));
+        SplitBill savedBill = splitBillRepository.save(bill);
+        auditLogService.record(user, "SPLIT_BILL_CREATED", "SPLIT_BILL", savedBill.getId(), billDetails(savedBill));
+        return toResponse(savedBill);
     }
 
     @Transactional
@@ -160,6 +168,12 @@ public class SplitBillService {
         participant.recordPayment(amount);
         splitBillPaymentRepository.save(new SplitBillPayment(participant, reimbursement.id(), amount, request.occurredAt()));
         bill.refreshStatus();
+        auditLogService.record(requireUser(userId), "SPLIT_BILL_PAYMENT_RECORDED", "SPLIT_BILL", bill.getId(),
+                Map.of(
+                        "participant", participant.getName(),
+                        "amount", amount.toPlainString(),
+                        "currency", bill.getCurrency(),
+                        "status", bill.getStatus().name()));
         return toResponse(bill);
     }
 
@@ -175,6 +189,14 @@ public class SplitBillService {
     private UserAccount requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private Map<String, Object> billDetails(SplitBill bill) {
+        return Map.of(
+                "name", bill.getName(),
+                "totalAmount", bill.getTotalAmount().toPlainString(),
+                "currency", bill.getCurrency(),
+                "participantCount", bill.getParticipants().size());
     }
 
     private void validateParticipantAmounts(CreateSplitBillRequest request) {
