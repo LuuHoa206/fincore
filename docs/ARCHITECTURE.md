@@ -170,6 +170,16 @@ focus by month. `MonthlyReviewService` calls public reporting services for
 cash-flow facts and insights, so no financial total is duplicated or mutable
 from this module.
 
+## Financial calendar module
+
+`financialcalendar` is a read-only composition layer with its own controller
+and service, but no database table. `FinancialCalendarService` asks public
+services from Identity, Transaction and Recurring for the user's time zone,
+bounded posted transactions and enabled schedules. It then groups the result by
+local date. `ACTUAL` and `SCHEDULED` entries are separate so the client cannot
+confuse a ledger fact with a future projection. The module never writes a
+transaction, wallet, ledger entry, audit event, or recurring rule.
+
 - Redis cho cache dashboard, rate-limit va idempotency phan tan.
 - Message broker cho email, notification va reporting projection.
 - Object storage cho hoa don/chung tu.

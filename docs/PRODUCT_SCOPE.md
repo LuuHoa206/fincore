@@ -23,6 +23,7 @@ trong từng hũ và có đang tiến gần mục tiêu tiết kiệm hay không
 8. Theo dõi mục tiêu tiết kiệm.
 9. Lịch sử giao dịch có tìm kiếm, lọc và phân trang.
 10. Dashboard tháng: thu, chi, dòng tiền và tiến độ hũ.
+11. Lịch tài chính tháng: phân biệt giao dịch đã ghi nhận với lịch thu chi dự kiến.
 
 ## Chưa làm trong MVP
 

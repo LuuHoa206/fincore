@@ -1,4 +1,4 @@
-import { ArrowLeftRight, BellRing, CalendarClock, ChartNoAxesCombined, CircleDollarSign, FilePenLine, History, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Tag, Target, UsersRound, WalletCards, X } from 'lucide-react'
+import { ArrowLeftRight, BellRing, CalendarDays, CalendarClock, ChartNoAxesCombined, CircleDollarSign, FilePenLine, History, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Tag, Target, UsersRound, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet } from 'react-router-dom'
@@ -38,6 +38,7 @@ export function AppLayout() {
           <NavLink to="/activity" onClick={() => setMobileNavOpen(false)}><History /> Lịch sử hoạt động</NavLink>
           <NavLink to="/notifications" onClick={() => setMobileNavOpen(false)}><BellRing /> Nhắc việc{unreadCount > 0 && <span className="sidebar-notification-count" aria-label={`${unreadCount} nhắc việc chưa đọc`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}</NavLink>
           <NavLink to="/monthly-review" onClick={() => setMobileNavOpen(false)}><FilePenLine /> Tổng kết tháng</NavLink>
+          <NavLink to="/calendar" onClick={() => setMobileNavOpen(false)}><CalendarDays /> Lịch tài chính</NavLink>
           <NavLink to="/recurring" onClick={() => setMobileNavOpen(false)}><CalendarClock /> Giao dịch định kỳ</NavLink>
           <NavLink to="/split-bills" onClick={() => setMobileNavOpen(false)}><UsersRound /> Chia hóa đơn</NavLink>
           <NavLink to="/budgets" onClick={() => setMobileNavOpen(false)}><ChartNoAxesCombined /> Ngân sách</NavLink>

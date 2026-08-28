@@ -107,7 +107,7 @@ class NotificationServiceTest {
         return new RecurringRuleResponse(
                 UUID.randomUUID(), "Tiền thuê nhà", UUID.randomUUID(), "Ngân hàng", UUID.randomUUID(), "Nhà ở",
                 TransactionType.EXPENSE, new BigDecimal("5000000"), "VND", "Thanh toán tiền thuê", null,
-                RecurringFrequency.MONTHLY, nextRunAt, false, true, false, nextRunAt.minusSeconds(60), nextRunAt.minusSeconds(30));
+                RecurringFrequency.MONTHLY, 1, nextRunAt, false, true, false, nextRunAt.minusSeconds(60), nextRunAt.minusSeconds(30));
     }
 
     private BudgetResponse budget(BudgetStatus status) {

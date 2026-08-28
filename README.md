@@ -132,7 +132,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 
 ## Current status
 
-The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, and monthly-review milestones are complete. The
+The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, monthly-review, and financial-calendar milestones are complete. The
 API supports account registration, login, rotating refresh tokens, owner-scoped
 wallet management, system and user-owned categories, virtual money-jar
 allocation and transfers with concurrency protection, monthly category budgets derived from
@@ -146,6 +146,12 @@ monthly-review workspace combines reporting-derived per-currency totals and
 explainable insights with a private reflection and focus for the following
 month. Read-state notifications surface budgets needing attention and recurring
 transactions due soon without sending email or recording transactions.
+
+The financial calendar presents posted ledger transactions alongside future
+occurrences from enabled recurring rules in the user's time zone. Recorded and
+scheduled entries are visually and semantically distinct: scheduled entries are
+read-only projections and never reserve funds, alter a wallet, or create a
+transaction.
 
 Users can update their display name, default currency for new forms, and IANA
 time zone from the application. The setting affects future form defaults and

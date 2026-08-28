@@ -22,6 +22,7 @@ const SettingsPage = lazy(async () => ({ default: (await import('./features/auth
 const ActivityHistoryPage = lazy(async () => ({ default: (await import('./features/audit/ActivityHistoryPage')).ActivityHistoryPage }))
 const NotificationsPage = lazy(async () => ({ default: (await import('./features/notifications/NotificationsPage')).NotificationsPage }))
 const MonthlyReviewPage = lazy(async () => ({ default: (await import('./features/monthlyreview/MonthlyReviewPage')).MonthlyReviewPage }))
+const FinancialCalendarPage = lazy(async () => ({ default: (await import('./features/financialcalendar/FinancialCalendarPage')).FinancialCalendarPage }))
 
 function App() {
   return (
@@ -46,6 +47,7 @@ function App() {
               <Route path="activity" element={<ActivityHistoryPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="monthly-review" element={<MonthlyReviewPage />} />
+              <Route path="calendar" element={<FinancialCalendarPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
