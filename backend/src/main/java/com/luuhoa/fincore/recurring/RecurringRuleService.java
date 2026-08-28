@@ -5,8 +5,10 @@ import java.time.Instant;
 import java.util.Currency;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
@@ -30,18 +32,21 @@ public class RecurringRuleService {
     private final WalletService walletService;
     private final CategoryService categoryService;
     private final RecurringRuleExecutionService executionService;
+    private final AuditLogService auditLogService;
 
     public RecurringRuleService(
             RecurringRuleRepository recurringRuleRepository,
             UserAccountRepository userRepository,
             WalletService walletService,
             CategoryService categoryService,
-            RecurringRuleExecutionService executionService) {
+            RecurringRuleExecutionService executionService,
+            AuditLogService auditLogService) {
         this.recurringRuleRepository = recurringRuleRepository;
         this.userRepository = userRepository;
         this.walletService = walletService;
         this.categoryService = categoryService;
         this.executionService = executionService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -63,16 +68,18 @@ public class RecurringRuleService {
 
     @Transactional
     public RecurringRuleResponse create(UUID userId, CreateRecurringRuleRequest request) {
-        UserAccount user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+        UserAccount user = requireUser(userId);
         RecurringRule rule = createRule(user, userId, request);
-        return RecurringRuleResponse.from(recurringRuleRepository.save(rule));
+        RecurringRule savedRule = recurringRuleRepository.save(rule);
+        auditLogService.record(user, "RECURRING_RULE_CREATED", "RECURRING_RULE", savedRule.getId(), ruleDetails(savedRule));
+        return RecurringRuleResponse.from(savedRule);
     }
 
     @Transactional
     public RecurringRuleResponse update(UUID userId, UUID ruleId, UpdateRecurringRuleRequest request) {
         RecurringRule rule = recurringRuleRepository.findByIdAndUserId(ruleId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("RECURRING_RULE_NOT_FOUND", "Recurring rule was not found"));
+        UserAccount user = requireUser(userId);
         Wallet wallet = walletService.requireOwnedActiveWallet(userId, request.walletId());
         Category category = categoryService.requireAvailableForTransaction(userId, request.categoryId(), categoryTypeFor(request.transactionType()));
         validateRequest(request.transactionType(), request.amount(), wallet.getCurrency(), request.applyAllocationRule());
@@ -90,6 +97,7 @@ public class RecurringRuleService {
                 request.autoRecord(),
                 request.enabled(),
                 request.applyAllocationRule());
+        auditLogService.record(user, "RECURRING_RULE_UPDATED", "RECURRING_RULE", rule.getId(), ruleDetails(rule));
         return RecurringRuleResponse.from(rule);
     }
 
@@ -98,6 +106,7 @@ public class RecurringRuleService {
         RecurringRule rule = recurringRuleRepository.findByIdAndUserId(ruleId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("RECURRING_RULE_NOT_FOUND", "Recurring rule was not found"));
         rule.disable();
+        auditLogService.record(requireUser(userId), "RECURRING_RULE_DISABLED", "RECURRING_RULE", rule.getId(), ruleDetails(rule));
     }
 
     public TransactionResponse recordDue(UUID userId, UUID ruleId, Instant now) {
@@ -129,6 +138,22 @@ public class RecurringRuleService {
                 request.autoRecord(),
                 request.enabled(),
                 request.applyAllocationRule());
+    }
+
+    private UserAccount requireUser(UUID userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    private Map<String, Object> ruleDetails(RecurringRule rule) {
+        return Map.of(
+                "name", rule.getName(),
+                "currency", rule.getCurrency(),
+                "transactionType", rule.getTransactionType().name(),
+                "amount", rule.getAmount().toPlainString(),
+                "frequency", rule.getFrequency().name(),
+                "autoRecord", rule.isAutoRecord(),
+                "enabled", rule.isEnabled());
     }
 
     private void validateRequest(TransactionType transactionType, BigDecimal amount, String currency, boolean applyAllocationRule) {
