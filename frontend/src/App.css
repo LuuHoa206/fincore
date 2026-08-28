@@ -580,6 +580,44 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .notification-actions .icon-button { width: 34px; height: 34px; }
 .notification-actions .icon-button svg { width: 15px; }
 .notification-empty { min-height: 250px; }
+.monthly-review-topbar { align-items: flex-start; }
+.month-picker { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; min-height: 42px; padding: 0 11px; border: 1px solid #cce5da; border-radius: 7px; color: var(--green-700); background: #f4fcf8; font-size: 11px; font-weight: 800; }
+.month-picker svg { width: 17px; }
+.month-picker input { width: 112px; border: 0; color: var(--ink); background: transparent; font: inherit; outline: 0; }
+.monthly-review-layout { display: grid; gap: 18px; }
+.monthly-review-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; }
+.monthly-review-currency, .monthly-review-empty-summary { padding: 18px; border: 1px solid var(--line); border-radius: 8px; background: #fff; box-shadow: 0 8px 24px rgba(22, 49, 41, .045); }
+.monthly-review-currency > header { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #edf2f0; }
+.monthly-review-currency > header > span, .monthly-review-empty-summary > svg { width: 36px; height: 36px; display: grid; flex: 0 0 auto; place-items: center; border-radius: 7px; color: var(--green-700); background: #e6f8f1; }
+.monthly-review-currency > header svg { width: 18px; }
+.monthly-review-currency header strong, .monthly-review-currency header small { display: block; }
+.monthly-review-currency header strong { color: var(--ink); font-size: 14px; }
+.monthly-review-currency header small { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.monthly-review-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 14px; }
+.monthly-review-metric { display: grid; gap: 4px; min-width: 0; padding: 10px; border-radius: 7px; background: #f8fbfa; }
+.monthly-review-metric > span { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 5px; color: #08795f; background: #e2f6ee; }
+.monthly-review-metric.expense > span { color: #ae4a4a; background: #fdecec; }
+.monthly-review-metric svg { width: 13px; }
+.monthly-review-metric small, .monthly-review-metric em { color: var(--muted); font-size: 9px; font-style: normal; }
+.monthly-review-metric strong { overflow: hidden; color: var(--ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.monthly-review-metric.income strong { color: #08795f; }
+.monthly-review-metric.expense strong { color: #b54848; }
+.monthly-review-empty-summary { display: flex; align-items: center; gap: 12px; }
+.monthly-review-empty-summary > div { min-width: 0; }
+.monthly-review-empty-summary strong { color: var(--ink); font-size: 13px; }
+.monthly-review-empty-summary p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.monthly-review-notes form { display: grid; gap: 15px; }
+.monthly-review-notes form > label { display: grid; gap: 7px; color: #455750; font-size: 11px; font-weight: 800; }
+.monthly-review-notes textarea { width: 100%; min-height: 104px; resize: vertical; padding: 11px; border: 1px solid #ccd9d4; border-radius: 7px; color: var(--ink); background: #fff; font: inherit; font-size: 12px; line-height: 1.55; outline: 0; }
+.monthly-review-notes textarea:focus { border-color: var(--green-600); box-shadow: 0 0 0 3px rgba(15, 143, 114, .1); }
+.monthly-review-notes footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 4px; }
+.monthly-review-notes footer small { max-width: 610px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.review-saved-state { display: inline-flex; align-items: center; gap: 5px; color: #08795f; font-size: 10px; font-weight: 800; }
+.review-saved-state svg { width: 14px; }
+.monthly-review-insights { display: grid; gap: 12px; }
+.monthly-review-insights > .section-heading { margin-bottom: 0; }
+.monthly-review-insights > .section-heading > svg { width: 22px; color: #ba8118; }
+.monthly-review-insight-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .paid-icon { width: 18px; color: #0a946f; }
 .split-bill-row > footer { display: flex; gap: 14px; padding: 12px 20px; border-top: 1px solid #edf2f0; color: var(--muted); background: #fbfefd; font-size: 11px; }
 .split-bill-row > footer span { flex: 0 0 auto; color: #60716b; font-weight: 800; }
@@ -691,6 +729,10 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .upcoming-recurring-value { grid-column: 2; justify-items: start; min-width: 0; text-align: left; }
   .notification-item { grid-template-columns: 40px minmax(0, 1fr); }
   .notification-actions { grid-column: 2; }
+  .monthly-review-topbar { display: grid; }
+  .monthly-review-summary { grid-template-columns: 1fr; }
+  .monthly-review-notes footer { align-items: stretch; flex-direction: column; }
+  .monthly-review-notes footer .primary-button { width: 100%; }
   .cash-flow-summary-item { grid-template-columns: 1fr; gap: 10px; }
   .cash-flow-summary-item > small { padding-bottom: 4px; border-bottom: 1px solid #e5eeea; }
   .cash-flow-occurrence { grid-template-columns: 34px minmax(0, 1fr); }
@@ -735,6 +777,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .transaction-actions { display: grid; grid-template-columns: 1fr; }
   .transaction-actions button { width: 100%; }
   .notification-topbar { display: grid; }
+  .monthly-review-metrics { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
   .allocation-rule-summary { grid-template-columns: auto 1fr; }
   .allocation-rule-summary p { grid-column: 1 / -1; }

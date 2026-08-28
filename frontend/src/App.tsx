@@ -21,6 +21,7 @@ const SplitBillsPage = lazy(async () => ({ default: (await import('./features/sp
 const SettingsPage = lazy(async () => ({ default: (await import('./features/auth/SettingsPage')).SettingsPage }))
 const ActivityHistoryPage = lazy(async () => ({ default: (await import('./features/audit/ActivityHistoryPage')).ActivityHistoryPage }))
 const NotificationsPage = lazy(async () => ({ default: (await import('./features/notifications/NotificationsPage')).NotificationsPage }))
+const MonthlyReviewPage = lazy(async () => ({ default: (await import('./features/monthlyreview/MonthlyReviewPage')).MonthlyReviewPage }))
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="activity" element={<ActivityHistoryPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="monthly-review" element={<MonthlyReviewPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

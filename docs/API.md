@@ -725,6 +725,33 @@ The endpoint is read-only and reports recorded transactions only. It does not
 include recurring-rule forecasts, perform exchange-rate conversion, or modify
 any financial record.
 
+## Monthly review
+
+### Get a monthly review workspace
+
+`GET /monthly-reviews?period=2026-08`
+
+Returns the requested month in the authenticated user's time zone. Monetary
+facts are server-derived from posted transactions through the existing dashboard
+and insight services; they are not copied into a review record. The response
+contains per-currency monthly income, expense and net values, transparent
+insights, and the user's optional reflection and next-month focus.
+
+### Save a monthly reflection
+
+`PUT /monthly-reviews?period=2026-08`
+
+```json
+{
+  "reflection": "I kept eating-out spending within the planned budget.",
+  "nextMonthFocus": "Transfer 2,000,000 VND to my emergency fund on payday."
+}
+```
+
+At least one non-blank field is required. A user has one review per month; a
+later save updates only their note. This endpoint never creates a transaction,
+changes a wallet balance, updates a budget, or changes a savings goal.
+
 ## Error format
 
 Validation and business errors share one response shape:
