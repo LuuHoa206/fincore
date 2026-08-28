@@ -25,6 +25,7 @@ trong từng hũ và có đang tiến gần mục tiêu tiết kiệm hay không
 10. Dashboard tháng: thu, chi, dòng tiền và tiến độ hũ.
 11. Lịch tài chính tháng: phân biệt giao dịch đã ghi nhận với lịch thu chi dự kiến.
 12. Nhập sao kê CSV có xem trước, kiểm tra từng dòng và chống trùng giao dịch.
+13. Đối soát số dư ví với sao kê theo ngày, chỉ rõ chênh lệch mà không tự ghi bù.
 
 ## Chưa làm trong MVP
 

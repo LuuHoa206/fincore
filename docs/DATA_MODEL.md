@@ -60,6 +60,14 @@ Nhập sao kê không tạo bảng riêng và không lưu nội dung file thô. 
 tiền tố `statement:`. Vì `user_id` và `idempotency_key` đã là duy nhất, việc gửi
 lại cùng một file chỉ bỏ qua dòng đã tồn tại, không làm thay đổi số dư lần hai.
 
+## Đối soát số dư ví
+
+Đối soát cũng không tạo bảng hay chỉnh sửa dữ liệu. Số dư trong hệ thống được
+tính từ tổng `ledger_entries.signed_amount` của một ví, thuộc đúng người dùng,
+với `financial_transactions.occurred_at` trước đầu ngày kế tiếp theo múi giờ
+của người dùng. Các bút toán đảo ngược vẫn được tính cùng bút toán gốc để tổng
+sổ cái luôn phản ánh đúng thực tế đã ghi nhận.
+
 ## Nhóm chia hóa đơn
 
 - `split_bills`: khoản chi đã ghi vào sổ cái, phần của người trả và trạng thái khoản cần thu.

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Banknote, Building2, CreditCard, Landmark, LoaderCircle, Pencil, Plus, Smartphone, WalletCards, X } from 'lucide-react'
+import { Archive, Banknote, Building2, ClipboardCheck, CreditCard, Landmark, LoaderCircle, Pencil, Plus, Smartphone, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -8,6 +8,7 @@ import { getApiErrorMessage } from '../../shared/api/apiError'
 import { useAuth } from '../auth/authContextState'
 import { walletApi } from './walletApi'
 import { walletTypes, type CreateWalletInput, type Wallet, type WalletType } from './walletTypes'
+import { WalletReconciliationModal } from '../reconciliation/WalletReconciliationModal'
 
 const walletLabels: Record<WalletType, string> = {
   CASH: 'Tiền mặt',
@@ -40,6 +41,7 @@ export function WalletsPage() {
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [archiveTarget, setArchiveTarget] = useState<Wallet | null>(null)
+  const [reconciliationWallet, setReconciliationWallet] = useState<Wallet | null>(null)
   const [actionError, setActionError] = useState('')
 
   const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
@@ -82,6 +84,7 @@ export function WalletsPage() {
             <div className="wallet-card-head"><span className="wallet-type-icon"><Icon /></span><span className="wallet-type-label">{walletLabels[wallet.walletType]}</span></div>
             <div className="wallet-balance"><small>Số dư hiện tại</small><strong>{formatCurrency(wallet.currentBalance, wallet.currency)}</strong></div>
             <div className="wallet-card-footer"><div><strong>{wallet.name}</strong><small>{wallet.currency}{wallet.allowNegative ? ' · Cho phép âm' : ''}</small></div><div className="row-actions">
+              <button className="icon-button" onClick={() => setReconciliationWallet(wallet)} title="Đối soát số dư" aria-label={`Đối soát ${wallet.name}`}><ClipboardCheck /></button>
               <button className="icon-button" onClick={() => openEdit(wallet)} title="Sửa ví" aria-label={`Sửa ${wallet.name}`}><Pencil /></button>
               <button className="icon-button danger-icon" onClick={() => setArchiveTarget(wallet)} title="Lưu trữ ví" aria-label={`Lưu trữ ${wallet.name}`}><Archive /></button>
             </div></div>
@@ -105,6 +108,8 @@ export function WalletsPage() {
         onCancel={() => setArchiveTarget(null)}
         onConfirm={() => archiveMutation.mutate(archiveTarget.id)}
       />}
+
+      {reconciliationWallet && <WalletReconciliationModal wallet={reconciliationWallet} onClose={() => setReconciliationWallet(null)} />}
     </>
   )
 }
