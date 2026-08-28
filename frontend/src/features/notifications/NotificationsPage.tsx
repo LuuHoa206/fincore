@@ -21,7 +21,10 @@ export function NotificationsPage() {
       if (read) return notificationApi.markRead(notificationKey)
       return notificationApi.markUnread(notificationKey)
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      void queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })
+    },
   })
   const notifications = notificationsQuery.data ?? []
   const unreadCount = notifications.filter((notification) => !notification.read).length
