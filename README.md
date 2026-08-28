@@ -132,7 +132,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 
 ## Current status
 
-The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, and reporting milestones are complete. The
+The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, and monthly-review milestones are complete. The
 API supports account registration, login, rotating refresh tokens, owner-scoped
 wallet management, system and user-owned categories, virtual money-jar
 allocation and transfers with concurrency protection, monthly category budgets derived from
@@ -140,6 +140,12 @@ posted expenses, saving goals derived from jar allocations, and immutable
 income/expense recording backed by balanced ledger entries and idempotency keys.
 The dashboard is server-composed from these modules and transaction history is
 filtered and paginated by the API instead of a client-side sample.
+
+Users can also review a selected month without editing financial facts: the
+monthly-review workspace combines reporting-derived per-currency totals and
+explainable insights with a private reflection and focus for the following
+month. Read-state notifications surface budgets needing attention and recurring
+transactions due soon without sending email or recording transactions.
 
 Users can update their display name, default currency for new forms, and IANA
 time zone from the application. The setting affects future form defaults and

@@ -72,3 +72,11 @@ thể được gắn hai lần vào công nợ.
 - Thời gian nghiệp vụ: `TIMESTAMPTZ`, lưu theo UTC.
 - Ngày ngân sách: `DATE` hoặc cặp `year/month` tùy use case.
 - Entity thay đổi đồng thời có cột `version` cho optimistic locking.
+
+## Monthly review
+
+- `monthly_reviews`: one user reflection and next-month focus for each monthly
+  period. It intentionally contains no income, expense, balance, or budget
+  total; those values remain derived from the financial ledger at read time.
+- Unique key: `(user_id, period_start)`, which permits one editable review per
+  user and calendar month.

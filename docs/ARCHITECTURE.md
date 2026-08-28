@@ -162,6 +162,14 @@ cu the, khong phai ket luan gian lan.
 
 ## Huong mo rong
 
+## Monthly review module
+
+`monthlyreview` has its own controller, service, repository and
+`monthly_reviews` table. It stores only a user's reflection and next-month
+focus by month. `MonthlyReviewService` calls public reporting services for
+cash-flow facts and insights, so no financial total is duplicated or mutable
+from this module.
+
 - Redis cho cache dashboard, rate-limit va idempotency phan tan.
 - Message broker cho email, notification va reporting projection.
 - Object storage cho hoa don/chung tu.
