@@ -498,6 +498,32 @@ transactions. `MATCHED` means the difference is exactly zero; `DIFFERENT` does
 not alter any wallet, transaction, ledger entry, or audit data. Future statement
 dates are rejected.
 
+### Confirm a reconciliation adjustment
+
+`POST /wallet-reconciliations/adjustments`
+
+```http
+Idempotency-Key: 83c1e7c5-a65a-4d4b-b031-76203118daef
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "statementDate": "2026-08-26",
+  "statementBalance": 1250000,
+  "reason": "Sao kê có phí ngân hàng chưa được nhập"
+}
+```
+
+This endpoint is deliberately separate from preview. It recalculates the
+historical ledger balance after acquiring the same financial write lock used by
+transactions. If a difference remains, it records one `ADJUSTMENT` transaction
+at the end of the selected local day, balanced wallet/external ledger entries,
+and an audit event containing the statement date, balances, and signed change.
+The request requires an `Idempotency-Key`; replaying it returns the original
+transaction and never changes a wallet twice. A matched statement returns
+`RECONCILIATION_ALREADY_MATCHED` instead of recording a zero-value adjustment.
+
 ### Record income or expense
 
 `POST /transactions`

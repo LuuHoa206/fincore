@@ -6,6 +6,10 @@ export type WalletReconciliationInput = {
   statementBalance: number
 }
 
+export type WalletReconciliationAdjustmentInput = WalletReconciliationInput & {
+  reason: string
+}
+
 export type WalletReconciliationPreview = {
   walletId: string
   walletName: string

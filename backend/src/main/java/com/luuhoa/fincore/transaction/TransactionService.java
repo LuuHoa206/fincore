@@ -189,7 +189,7 @@ public class TransactionService {
                 "amount", transaction.getAmount().toPlainString(),
                 "currency", transaction.getCurrency()));
 
-        return new TransactionCreateResult(TransactionResponse.from(transaction, wallet), true);
+        return new TransactionCreateResult(TransactionResponse.from(transaction, wallet, walletChange), true);
     }
 
     @Transactional(readOnly = true)
@@ -236,7 +236,66 @@ public class TransactionService {
                 "amount", transfer.getAmount().toPlainString(),
                 "currency", transfer.getCurrency()));
 
-        return TransactionResponse.from(transfer, wallets.source(), wallets.destination());
+        return TransactionResponse.from(transfer, wallets.source(), wallets.destination(), amount.negate());
+    }
+
+    /**
+     * Records a human-confirmed correction from a bank-statement reconciliation.
+     * The difference is recalculated inside the same financial write transaction
+     * so a browser can never choose the amount that changes a wallet.
+     */
+    @Transactional
+    public TransactionResponse createReconciliationAdjustment(
+            UUID userId,
+            ReconciliationAdjustmentCommand command,
+            String idempotencyKey) {
+        String normalizedKey = normalizeRequiredIdempotencyKey(idempotencyKey);
+        TransactionResponse existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
+        }
+
+        UserAccount user = lockUserForFinancialWrite(userId);
+        existing = findExistingTransaction(userId, normalizedKey);
+        if (existing != null) {
+            return existing;
+        }
+        Wallet wallet = walletService.requireOwnedWalletForTransaction(userId, command.walletId());
+        BigDecimal statementBalance = validateAndNormalizeAmount(command.statementBalance(), wallet.getCurrency());
+        LedgerEntryRepository.WalletLedgerBalance summary = ledgerEntryRepository.summarizeWalletBalanceUntil(
+                userId, wallet.getId(), command.endExclusive());
+        BigDecimal ledgerBalance = summary == null || summary.getBalance() == null
+                ? BigDecimal.ZERO
+                : summary.getBalance();
+        BigDecimal signedAdjustment = statementBalance.subtract(ledgerBalance);
+        if (signedAdjustment.signum() == 0) {
+            throw new ConflictException("RECONCILIATION_ALREADY_MATCHED", "The statement balance already matches the ledger");
+        }
+        signedAdjustment = validateAndNormalizeAmount(signedAdjustment.abs(), wallet.getCurrency())
+                .multiply(BigDecimal.valueOf(signedAdjustment.signum()));
+
+        wallet.applyBalance(signedAdjustment);
+        FinancialTransaction adjustment = new FinancialTransaction(
+                user,
+                null,
+                TransactionType.ADJUSTMENT,
+                signedAdjustment.abs(),
+                wallet.getCurrency(),
+                "Điều chỉnh theo đối soát sao kê",
+                normalizeNotes(command.reason()),
+                command.endExclusive().minusNanos(1),
+                normalizedKey);
+        transactionRepository.save(adjustment);
+        ledgerEntryRepository.saveAll(List.of(
+                LedgerEntry.walletEntry(adjustment, wallet, signedAdjustment),
+                LedgerEntry.externalEntry(adjustment, EXTERNAL_ACCOUNT, signedAdjustment.negate(), wallet.getCurrency())));
+        auditLogService.record(user, "WALLET_RECONCILIATION_ADJUSTED", "TRANSACTION", adjustment.getId(), java.util.Map.of(
+                "walletId", wallet.getId().toString(),
+                "statementDate", command.statementDate().toString(),
+                "statementBalance", statementBalance.toPlainString(),
+                "ledgerBalance", ledgerBalance.toPlainString(),
+                "signedAdjustment", signedAdjustment.toPlainString()));
+        return TransactionResponse.from(adjustment, wallet, signedAdjustment);
     }
 
     @Transactional
@@ -265,7 +324,7 @@ public class TransactionService {
             ledgerEntryRepository.saveAll(List.of(
                     LedgerEntry.walletEntry(reversal, wallet, reversalAmount),
                     LedgerEntry.externalEntry(reversal, EXTERNAL_ACCOUNT, reversalAmount.negate(), wallet.getCurrency())));
-            response = TransactionResponse.from(reversal, wallet);
+            response = TransactionResponse.from(reversal, wallet, reversalAmount);
         } else if (original.getTransactionType() == TransactionType.TRANSFER && walletEntries.size() == 2) {
             WalletTransferPair lockedWallets = walletService.lockOwnedWalletsForTransfer(
                     userId,
@@ -291,7 +350,7 @@ public class TransactionService {
                     .filter(entry -> entry.getSignedAmount().signum() > 0)
                     .findFirst()
                     .orElseThrow(() -> new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transfer reversal is inconsistent"));
-            response = TransactionResponse.from(reversal, sourceEntry.getWallet(), destinationEntry.getWallet());
+            response = TransactionResponse.from(reversal, sourceEntry.getWallet(), destinationEntry.getWallet(), sourceEntry.getSignedAmount());
         } else {
             throw new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transaction ledger entries are inconsistent");
         }
@@ -309,7 +368,7 @@ public class TransactionService {
             throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found");
         }
         if (walletEntries.size() == 1) {
-            return TransactionResponse.from(transaction, walletEntries.getFirst().getWallet());
+            return TransactionResponse.from(transaction, walletEntries.getFirst().getWallet(), walletEntries.getFirst().getSignedAmount());
         }
         if (walletEntries.size() == 2 && (transaction.getTransactionType() == TransactionType.TRANSFER
                 || transaction.getTransactionType() == TransactionType.REVERSAL)) {
@@ -321,7 +380,7 @@ public class TransactionService {
                     .filter(entry -> entry.getSignedAmount().signum() > 0)
                     .findFirst()
                     .orElseThrow(() -> new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transfer destination entry was not found"));
-            return TransactionResponse.from(transaction, sourceEntry.getWallet(), destinationEntry.getWallet());
+            return TransactionResponse.from(transaction, sourceEntry.getWallet(), destinationEntry.getWallet(), sourceEntry.getSignedAmount());
         }
         throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entries are inconsistent");
     }
@@ -366,6 +425,14 @@ public class TransactionService {
         String normalized = key.trim();
         if (normalized.length() > 100) {
             throw new IllegalArgumentException("Idempotency-Key must contain at most 100 characters");
+        }
+        return normalized;
+    }
+
+    private String normalizeRequiredIdempotencyKey(String key) {
+        String normalized = normalizeIdempotencyKey(key);
+        if (normalized == null) {
+            throw new IllegalArgumentException("Idempotency-Key is required when confirming a reconciliation adjustment");
         }
         return normalized;
     }

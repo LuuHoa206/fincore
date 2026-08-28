@@ -785,6 +785,12 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .reconciliation-result dl > div { display: grid; gap: 4px; padding: 11px; border: 1px solid #e2ece7; border-radius: 6px; background: rgba(255,255,255,.7); }
 .reconciliation-result dt { color: #71839b; font-size: 10px; font-weight: 800; }
 .reconciliation-result dd { margin: 0; color: var(--ink); font-size: 13px; font-weight: 900; }
+.reconciliation-adjustment { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 16px; }
+.reconciliation-adjustment strong { color: var(--danger); }
+.reconciliation-adjustment p { margin: 6px 0 12px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.reconciliation-adjustment label { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 800; }
+.reconciliation-adjustment textarea { resize: vertical; }
+.reconciliation-adjustment .danger-button { margin-top: 12px; }
 
 @media (max-width: 760px) {
   .sidebar { transform: translateX(-100%); transition: transform .22s ease; }

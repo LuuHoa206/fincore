@@ -109,7 +109,13 @@ export function WalletsPage() {
         onConfirm={() => archiveMutation.mutate(archiveTarget.id)}
       />}
 
-      {reconciliationWallet && <WalletReconciliationModal wallet={reconciliationWallet} onClose={() => setReconciliationWallet(null)} />}
+      {reconciliationWallet && <WalletReconciliationModal wallet={reconciliationWallet} onClose={() => setReconciliationWallet(null)} onAdjusted={() => {
+        void queryClient.invalidateQueries({ queryKey: ['wallets'] })
+        void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+        void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+        void queryClient.invalidateQueries({ queryKey: ['financial-calendar'] })
+        void queryClient.invalidateQueries({ queryKey: ['monthly-review'] })
+      }} />}
     </>
   )
 }

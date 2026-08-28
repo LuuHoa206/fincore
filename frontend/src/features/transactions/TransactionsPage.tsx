@@ -182,6 +182,8 @@ function TransactionRow({ transaction, onReverse }: { transaction: Transaction; 
   const isIncome = transaction.transactionType === 'INCOME'
   const isTransfer = transaction.transactionType === 'TRANSFER' || (transaction.transactionType === 'REVERSAL' && transaction.counterpartyWalletId !== null)
   const isReversal = transaction.transactionType === 'REVERSAL'
+  const walletChange = transaction.walletChange ?? (isIncome ? transaction.amount : isTransfer ? 0 : -transaction.amount)
+  const isPositiveChange = walletChange > 0
   const canReverse = transaction.status === 'POSTED' && !isReversal
   const typeLabel: Record<TransactionType, string> = { INCOME: 'Thu nhập', EXPENSE: 'Chi tiêu', TRANSFER: 'Chuyển tiền', JAR_TRANSFER: 'Phân bổ hũ', REFUND: 'Hoàn tiền', ADJUSTMENT: 'Điều chỉnh', REVERSAL: 'Hoàn tác' }
 
@@ -191,7 +193,7 @@ function TransactionRow({ transaction, onReverse }: { transaction: Transaction; 
     <td>{transaction.counterpartyWalletName ? `${transaction.walletName} → ${transaction.counterpartyWalletName}` : transaction.walletName}</td>
     <td><time>{formatDateTime(transaction.occurredAt)}</time></td>
     <td><span className={`status-pill ${transaction.status.toLowerCase()}`}>{statusLabel(transaction.status)}</span></td>
-    <td className={`numeric-cell amount-cell ${isIncome ? 'amount-income' : isTransfer ? 'amount-transfer' : 'amount-expense'}`}>{isIncome ? '+' : isTransfer ? '' : '-'}{formatCurrency(transaction.amount, transaction.currency)}</td>
+    <td className={`numeric-cell amount-cell ${isPositiveChange ? 'amount-income' : isTransfer ? 'amount-transfer' : 'amount-expense'}`}>{isTransfer ? '' : isPositiveChange ? '+' : '-'}{formatCurrency(Math.abs(walletChange), transaction.currency)}</td>
     <td className="action-cell">{canReverse && <button className="icon-button" title="Hoàn tác giao dịch" aria-label={`Hoàn tác ${transaction.description}`} onClick={onReverse}><RotateCcw /></button>}</td>
   </tr>
 }
