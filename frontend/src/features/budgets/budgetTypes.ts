@@ -30,3 +30,16 @@ export type UpdateBudgetInput = {
   limitAmount?: number
   warningThreshold?: number
 }
+
+export type BudgetLimitSuggestion = {
+  categoryId: string
+  categoryName: string
+  categoryIcon: string | null
+  categoryColor: string | null
+  periodStart: string
+  currency: string
+  historyMonths: number
+  historicalExpenseTotal: number
+  suggestedLimit: number
+  reason: string
+}

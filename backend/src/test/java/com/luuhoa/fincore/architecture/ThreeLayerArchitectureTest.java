@@ -14,6 +14,7 @@ import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.allocationrule.AllocationRuleController;
 import com.luuhoa.fincore.allocationrule.AllocationRuleService;
 import com.luuhoa.fincore.budget.BudgetController;
+import com.luuhoa.fincore.budget.BudgetLimitSuggestionService;
 import com.luuhoa.fincore.budget.BudgetService;
 import com.luuhoa.fincore.identity.AuthController;
 import com.luuhoa.fincore.identity.AuthService;
@@ -59,6 +60,7 @@ class ThreeLayerArchitectureTest {
         assertControllerUsesService(FinancialCalendarController.class, FinancialCalendarService.class);
         assertControllerUsesService(AllocationRuleController.class, AllocationRuleService.class);
         assertControllerUsesService(BudgetController.class, BudgetService.class);
+        assertControllerUsesService(BudgetController.class, BudgetLimitSuggestionService.class);
         assertControllerUsesService(MoneyJarController.class, MoneyJarService.class);
         assertControllerUsesService(MonthlyReviewController.class, MonthlyReviewService.class);
         assertControllerUsesService(NotificationController.class, NotificationService.class);

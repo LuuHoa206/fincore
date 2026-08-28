@@ -26,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BudgetController {
 
     private final BudgetService budgetService;
+    private final BudgetLimitSuggestionService budgetLimitSuggestionService;
 
-    public BudgetController(BudgetService budgetService) {
+    public BudgetController(BudgetService budgetService, BudgetLimitSuggestionService budgetLimitSuggestionService) {
         this.budgetService = budgetService;
+        this.budgetLimitSuggestionService = budgetLimitSuggestionService;
     }
 
     @GetMapping
@@ -36,6 +38,14 @@ public class BudgetController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth period) {
         return budgetService.list(userId(jwt), period);
+    }
+
+    @GetMapping("/suggestions")
+    List<BudgetLimitSuggestionResponse> suggestions(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth period,
+            @RequestParam(required = false) String currency) {
+        return budgetLimitSuggestionService.list(userId(jwt), period, currency);
     }
 
     @PostMapping

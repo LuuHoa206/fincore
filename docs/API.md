@@ -357,6 +357,34 @@ user's configured time zone to select the current month.
 Each response includes `limitAmount`, `spentAmount`, `remainingAmount`,
 `usagePercentage`, and status `ON_TRACK`, `WARNING`, or `EXCEEDED`.
 
+### Suggest budget limits from history
+
+`GET /budgets/suggestions?period=2026-08&currency=VND`
+
+Returns only categories without an active budget in the selected month. For
+each category, the service totals `POSTED` expenses in the same currency during
+the preceding three calendar months and proposes the rounded monthly average.
+Categories without recorded expenses are omitted.
+
+The endpoint is read-only. It never creates a budget or changes transactions;
+the client must send a separate `POST /budgets` after the user reviews and
+confirms a suggestion.
+
+```json
+[
+  {
+    "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+    "categoryName": "Food",
+    "periodStart": "2026-08-01",
+    "currency": "VND",
+    "historyMonths": 3,
+    "historicalExpenseTotal": 1800000,
+    "suggestedLimit": 600000,
+    "reason": "Average posted spending across the previous 3 months"
+  }
+]
+```
+
 ### Create a budget
 
 `POST /budgets`
