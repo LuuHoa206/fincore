@@ -141,6 +141,40 @@ public class MoneyJarService {
                 context.availableToAllocate().add(amount));
     }
 
+    @Transactional
+    public JarTransferResponse transfer(UUID userId, TransferBetweenJarsRequest request) {
+        if (request.sourceJarId().equals(request.destinationJarId())) {
+            throw new ConflictException("JAR_TRANSFER_SAME_JAR", "Choose two different money jars for a transfer");
+        }
+
+        List<MoneyJar> jars = moneyJarRepository.findAllActiveByUserIdForUpdate(userId);
+        MoneyJar sourceJar = requireFromLockedJars(jars, request.sourceJarId());
+        MoneyJar destinationJar = requireFromLockedJars(jars, request.destinationJarId());
+        if (!sourceJar.getCurrency().equals(destinationJar.getCurrency())) {
+            throw new ConflictException("JAR_TRANSFER_CURRENCY_MISMATCH", "Money jars must use the same currency");
+        }
+
+        BigDecimal amount = normalizeAmount(request.amount(), sourceJar.getCurrency());
+        if (sourceJar.getAllocatedBalance().compareTo(amount) < 0) {
+            throw new ConflictException("INSUFFICIENT_JAR_BALANCE", "The source money jar does not have enough allocated balance");
+        }
+        sourceJar.applyAllocation(amount.negate());
+        destinationJar.applyAllocation(amount);
+        jarMovementRepository.saveAll(List.of(
+                JarMovement.transferOut(sourceJar, amount),
+                JarMovement.transferIn(destinationJar, amount)));
+        auditLogService.record(requireUser(userId), "MONEY_JAR_TRANSFERRED", "MONEY_JAR", sourceJar.getId(), Map.of(
+                "amount", amount.toPlainString(),
+                "currency", sourceJar.getCurrency(),
+                "sourceJar", sourceJar.getName(),
+                "destinationJar", destinationJar.getName(),
+                "destinationJarId", destinationJar.getId().toString()));
+        return new JarTransferResponse(
+                MoneyJarResponse.from(sourceJar),
+                MoneyJarResponse.from(destinationJar),
+                amount);
+    }
+
     private AllocationContext lockAllocationContext(UUID userId, UUID jarId) {
         List<Wallet> wallets = walletService.lockActiveWalletsForAllocation(userId);
         List<MoneyJar> jars = moneyJarRepository.findAllActiveByUserIdForUpdate(userId);
@@ -202,6 +236,13 @@ public class MoneyJarService {
                 .orElseThrow(() -> new ResourceNotFoundException("MONEY_JAR_NOT_FOUND", "Money jar was not found"));
     }
 
+    private MoneyJar requireFromLockedJars(List<MoneyJar> jars, UUID jarId) {
+        return jars.stream()
+                .filter(jar -> jar.getId().equals(jarId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("MONEY_JAR_NOT_FOUND", "Money jar was not found"));
+    }
+
     private UserAccount requireUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
@@ -224,7 +265,11 @@ public class MoneyJarService {
         if (requestedAmount.scale() > allowedScale) {
             throw new IllegalArgumentException("Amount has more decimal places than the jar currency supports");
         }
-        return requestedAmount.setScale(allowedScale);
+        BigDecimal normalizedAmount = requestedAmount.setScale(allowedScale);
+        if (normalizedAmount.signum() <= 0) {
+            throw new IllegalArgumentException("Amount must be greater than zero for the jar currency");
+        }
+        return normalizedAmount;
     }
 
     private String normalizeCurrency(String requestedCurrency) {

@@ -20,6 +20,7 @@ const activityCopy: Record<string, { title: string; description: string; icon: t
   MONEY_JAR_ARCHIVED: { title: 'Đã lưu trữ hũ tiền', description: 'Hũ tiền không còn dùng cho phân bổ mới', icon: History },
   MONEY_JAR_ALLOCATION_ADDED: { title: 'Đã phân bổ tiền vào hũ', description: 'Số tiền đã được dành riêng cho mục tiêu', icon: ArrowLeftRight },
   MONEY_JAR_ALLOCATION_RELEASED: { title: 'Đã rút tiền khỏi hũ', description: 'Số tiền đã được trả về số dư khả dụng', icon: ArrowLeftRight },
+  MONEY_JAR_TRANSFERRED: { title: 'Đã chuyển tiền giữa các hũ', description: 'Phân bổ đã được chuyển sang một mục tiêu khác', icon: ArrowLeftRight },
   SAVING_GOAL_CREATED: { title: 'Đã tạo mục tiêu tiết kiệm', description: 'Một mục tiêu tiết kiệm mới đã được thêm', icon: History },
   SAVING_GOAL_UPDATED: { title: 'Đã cập nhật mục tiêu tiết kiệm', description: 'Thông tin mục tiêu đã thay đổi', icon: History },
   SAVING_GOAL_STATUS_CHANGED: { title: 'Đã đổi trạng thái mục tiêu', description: 'Trạng thái theo dõi mục tiêu đã thay đổi', icon: History },

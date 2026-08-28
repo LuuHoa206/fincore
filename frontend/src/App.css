@@ -256,7 +256,9 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 }
 .page-subtitle { max-width: 620px; margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .wallet-topbar { align-items: flex-end; }
+.topbar-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .wallet-topbar .primary-button { flex: 0 0 auto; }
+.form-help { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .transaction-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
 .wallet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .wallet-card {
@@ -670,6 +672,7 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .transaction-list article { grid-template-columns: 38px 1fr auto; padding: 10px 0; }
   .transaction-list time { display: none; }
   .wallet-topbar { align-items: flex-start; }
+  .topbar-actions { justify-content: flex-start; }
   .transaction-actions { justify-content: flex-start; }
   .wallet-grid { grid-template-columns: 1fr; }
   .category-grid { grid-template-columns: 1fr; }
@@ -696,6 +699,8 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .budget-content { flex-direction: column; }
   .transaction-list > article > strong { font-size: 11px; }
   .wallet-topbar { display: grid; }
+  .topbar-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+  .topbar-actions button { width: 100%; }
   .wallet-topbar .primary-button { width: 100%; }
   .transaction-actions { display: grid; grid-template-columns: 1fr; }
   .transaction-actions button { width: 100%; }

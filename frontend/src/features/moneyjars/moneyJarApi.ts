@@ -1,5 +1,5 @@
 import { httpClient } from '../../shared/api/httpClient'
-import type { CreateMoneyJarInput, JarAllocationResult, MoneyJar, UpdateMoneyJarInput } from './moneyJarTypes'
+import type { CreateMoneyJarInput, JarAllocationResult, JarTransferResult, MoneyJar, UpdateMoneyJarInput } from './moneyJarTypes'
 
 export const moneyJarApi = {
   list: async () => {
@@ -23,6 +23,10 @@ export const moneyJarApi = {
   },
   release: async (jarId: string, amount: number) => {
     const { data } = await httpClient.post<JarAllocationResult>(`/jars/${jarId}/release`, { amount })
+    return data
+  },
+  transfer: async (sourceJarId: string, destinationJarId: string, amount: number) => {
+    const { data } = await httpClient.post<JarTransferResult>('/jars/transfers', { sourceJarId, destinationJarId, amount })
     return data
   },
 }

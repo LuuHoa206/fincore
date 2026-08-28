@@ -70,4 +70,12 @@ public class JarMovement {
     public static JarMovement release(MoneyJar jar, BigDecimal amount) {
         return new JarMovement(jar, amount.negate(), JarMovementReason.RELEASE);
     }
+
+    public static JarMovement transferOut(MoneyJar jar, BigDecimal amount) {
+        return new JarMovement(jar, amount.negate(), JarMovementReason.TRANSFER_OUT);
+    }
+
+    public static JarMovement transferIn(MoneyJar jar, BigDecimal amount) {
+        return new JarMovement(jar, amount, JarMovementReason.TRANSFER_IN);
+    }
 }
