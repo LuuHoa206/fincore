@@ -61,3 +61,22 @@ export type TransactionPage = {
   totalElements: number
   totalPages: number
 }
+
+export type TransactionDraftSuggestion = {
+  description: string
+  suggestedAmount: number | null
+  suggestedTransactionType: 'INCOME' | 'EXPENSE'
+  suggestedDate: string | null
+  signals: string[]
+  categorySuggestions: Array<{
+    categoryId: string
+    categoryName: string
+    reason: string
+  }>
+}
+
+export type TransactionDraftSuggestionInput = {
+  text: string
+  currency: string
+  currentTransactionType: 'INCOME' | 'EXPENSE'
+}
