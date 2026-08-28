@@ -74,6 +74,17 @@ npm run build
 When Docker Desktop is available, also execute the PostgreSQL/Flyway integration
 suite documented in the root README.
 
+## Recurring auto-record recovery
+
+The recurring scheduler processes each due rule independently. A failure for one
+rule is logged as `recurring_rule_auto_record_failed` with its rule ID and does
+not prevent later due rules from being recorded. The failed rule remains due and
+is retried on the next scheduler cycle after its underlying issue is resolved.
+
+When this log entry appears, investigate the referenced rule, wallet, category,
+and recent audit records. Do not create a compensating transaction until the
+execution and audit history confirm that no record was created for that rule.
+
 ## Read-only performance baseline
 
 Before changing infrastructure sizing or promoting a release, run the
