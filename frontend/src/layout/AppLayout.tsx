@@ -1,7 +1,9 @@
 import { ArrowLeftRight, BellRing, CalendarClock, ChartNoAxesCombined, CircleDollarSign, History, LayoutDashboard, LogOut, Menu, Settings, SlidersHorizontal, Tag, Target, UsersRound, WalletCards, X } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../features/auth/authContextState'
+import { notificationApi } from '../features/notifications/notificationApi'
 
 function initials(name: string) {
   return name.trim().split(/\s+/).slice(-2).map((part) => part[0]?.toUpperCase()).join('')
@@ -10,6 +12,12 @@ function initials(name: string) {
 export function AppLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const { user, logout } = useAuth()
+  const unreadNotificationsQuery = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: notificationApi.unreadCount,
+    staleTime: 30_000,
+  })
+  const unreadCount = unreadNotificationsQuery.data ?? 0
 
   return (
     <div className="app-shell">
@@ -28,7 +36,7 @@ export function AppLayout() {
           <NavLink to="/categories" onClick={() => setMobileNavOpen(false)}><Tag /> Danh mục</NavLink>
           <NavLink to="/transactions" onClick={() => setMobileNavOpen(false)}><ArrowLeftRight /> Giao dịch</NavLink>
           <NavLink to="/activity" onClick={() => setMobileNavOpen(false)}><History /> Lịch sử hoạt động</NavLink>
-          <NavLink to="/notifications" onClick={() => setMobileNavOpen(false)}><BellRing /> Nhắc việc</NavLink>
+          <NavLink to="/notifications" onClick={() => setMobileNavOpen(false)}><BellRing /> Nhắc việc{unreadCount > 0 && <span className="sidebar-notification-count" aria-label={`${unreadCount} nhắc việc chưa đọc`}>{unreadCount > 99 ? '99+' : unreadCount}</span>}</NavLink>
           <NavLink to="/recurring" onClick={() => setMobileNavOpen(false)}><CalendarClock /> Giao dịch định kỳ</NavLink>
           <NavLink to="/split-bills" onClick={() => setMobileNavOpen(false)}><UsersRound /> Chia hóa đơn</NavLink>
           <NavLink to="/budgets" onClick={() => setMobileNavOpen(false)}><ChartNoAxesCombined /> Ngân sách</NavLink>
