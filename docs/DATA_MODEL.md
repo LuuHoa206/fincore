@@ -53,6 +53,13 @@ Transaction 1---0..1 SplitBill (original expense)
 Transaction 1---0..1 SplitBillPayment (reimbursement)
 ```
 
+## Nhập sao kê CSV
+
+Nhập sao kê không tạo bảng riêng và không lưu nội dung file thô. Mỗi dòng hợp lệ
+được ghi nhận như một `Transaction` bình thường, kèm idempotency key ổn định có
+tiền tố `statement:`. Vì `user_id` và `idempotency_key` đã là duy nhất, việc gửi
+lại cùng một file chỉ bỏ qua dòng đã tồn tại, không làm thay đổi số dư lần hai.
+
 ## Nhóm chia hóa đơn
 
 - `split_bills`: khoản chi đã ghi vào sổ cái, phần của người trả và trạng thái khoản cần thu.
