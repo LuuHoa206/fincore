@@ -122,6 +122,12 @@ cu the, khong phai ket luan gian lan.
   ap dung cung bo loc va owner scope nhu lich su giao dich, doc ledger theo lo
   de lay ten vi thay vi truy van tung dong. Export la read-only, dung mui gio
   cua nguoi dung va tu choi request vuot 10.000 dong de tranh cat ngam du lieu.
+- Module `statementimport` co controller va service rieng, nhung khong co
+  repository hay bang luu file. `StatementImportService` parse file trong bo
+  nho, lay vi va danh muc qua public service, roi goi `TransactionService` de
+  ghi tung dong hop le. Preview va confirm deu kiem tra lai toan bo file; dong
+  trung duoc nhan ra bang idempotency key on dinh va bo qua an toan. Module nay
+  khong ghi truc tiep vao transaction, ledger, hay wallet repository.
 - Quy tac giao dich dinh ky thuoc module `recurring`, co controller, service va
   repository rieng. Scheduler chi goi public service cua module nay; khi can ghi
   giao dich, `RecurringRuleExecutionService` goi `TransactionService` thay vi

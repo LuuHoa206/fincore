@@ -127,10 +127,19 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse create(UUID userId, CreateTransactionRequest request, String idempotencyKey) {
+        return createWithOutcome(userId, request, idempotencyKey).transaction();
+    }
+
+    /**
+     * Records an income or expense and tells composed workflows whether this
+     * request created a new posting or replayed an idempotent one.
+     */
+    @Transactional
+    public TransactionCreateResult createWithOutcome(UUID userId, CreateTransactionRequest request, String idempotencyKey) {
         String normalizedKey = normalizeIdempotencyKey(idempotencyKey);
         TransactionResponse existing = findExistingTransaction(userId, normalizedKey);
         if (existing != null) {
-            return existing;
+            return new TransactionCreateResult(existing, false);
         }
 
         if (request.transactionType() != TransactionType.INCOME && request.transactionType() != TransactionType.EXPENSE) {
@@ -140,7 +149,7 @@ public class TransactionService {
         UserAccount user = lockUserForFinancialWrite(userId);
         existing = findExistingTransaction(userId, normalizedKey);
         if (existing != null) {
-            return existing;
+            return new TransactionCreateResult(existing, false);
         }
         boolean applyAllocationRule = request.transactionType() == TransactionType.INCOME
                 && Boolean.TRUE.equals(request.applyAllocationRule());
@@ -180,7 +189,12 @@ public class TransactionService {
                 "amount", transaction.getAmount().toPlainString(),
                 "currency", transaction.getCurrency()));
 
-        return TransactionResponse.from(transaction, wallet);
+        return new TransactionCreateResult(TransactionResponse.from(transaction, wallet), true);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasRecordedIdempotencyKey(UUID userId, String idempotencyKey) {
+        return transactionRepository.findByUserIdAndIdempotencyKey(userId, normalizeIdempotencyKey(idempotencyKey)).isPresent();
     }
 
     @Transactional

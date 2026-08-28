@@ -444,6 +444,38 @@ time zone. To protect the API from an unexpectedly large download, exports are
 limited to 10,000 rows; a wider request returns `409` with
 `TRANSACTION_EXPORT_LIMIT_EXCEEDED` and must be narrowed first.
 
+## Bank statement import
+
+### Preview a CSV statement
+
+`POST /statement-imports/preview`
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "incomeCategoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "expenseCategoryId": "6e4af9e4-79c4-41aa-86d7-fc9eb680ae49",
+  "csvText": "date,type,amount,description,notes\\n2026-08-01 09:00,INCOME,15000000,Salary,August"
+}
+```
+
+The required headers are `date`, `type`, `amount`, and `description`; `notes`
+is optional. The import accepts comma or semicolon delimiters, ISO or
+`dd/MM/yyyy` dates, and `INCOME`/`THU` or `EXPENSE`/`CHI` types. A request has a
+maximum of 200 rows and 200 KB of CSV text. The response labels every row as
+`READY`, `DUPLICATE`, or `INVALID`; it never writes financial data.
+
+### Confirm a CSV statement
+
+`POST /statement-imports/confirm`
+
+The request body is identical to the preview request. The API parses and
+validates the supplied file again. If any row is invalid, it returns an error
+and writes no rows. Otherwise it records each ready row through the normal
+transaction service and skips duplicated rows. A deterministic statement
+fingerprint is used as the transaction idempotency key, so retrying the same
+confirmation never changes a wallet balance twice. Raw CSV text is not stored.
+
 ### Record income or expense
 
 `POST /transactions`

@@ -26,6 +26,8 @@ import com.luuhoa.fincore.notification.NotificationController;
 import com.luuhoa.fincore.notification.NotificationService;
 import com.luuhoa.fincore.savinggoal.SavingGoalController;
 import com.luuhoa.fincore.savinggoal.SavingGoalService;
+import com.luuhoa.fincore.statementimport.StatementImportController;
+import com.luuhoa.fincore.statementimport.StatementImportService;
 import com.luuhoa.fincore.splitbill.SplitBillController;
 import com.luuhoa.fincore.splitbill.SplitBillService;
 import com.luuhoa.fincore.reporting.DashboardController;
@@ -57,6 +59,7 @@ class ThreeLayerArchitectureTest {
         assertControllerUsesService(MonthlyReviewController.class, MonthlyReviewService.class);
         assertControllerUsesService(NotificationController.class, NotificationService.class);
         assertControllerUsesService(SavingGoalController.class, SavingGoalService.class);
+        assertControllerUsesService(StatementImportController.class, StatementImportService.class);
         assertControllerUsesService(SplitBillController.class, SplitBillService.class);
         assertControllerUsesService(DashboardController.class, DashboardService.class);
         assertControllerUsesService(RecurringRuleController.class, RecurringRuleService.class);

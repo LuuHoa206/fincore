@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, FileUp, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -9,6 +9,7 @@ import { categoryApi } from '../categories/categoryApi'
 import type { Category } from '../categories/categoryTypes'
 import { walletApi } from '../wallets/walletApi'
 import type { Wallet } from '../wallets/walletTypes'
+import { StatementImportModal } from '../statementimports/StatementImportModal'
 import { transactionApi } from './transactionApi'
 import { formatCurrency, formatDateTime } from './transactionFormatters'
 import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionType } from './transactionTypes'
@@ -46,6 +47,7 @@ export function TransactionsPage() {
   const queryClient = useQueryClient()
   const [formOpen, setFormOpen] = useState(false)
   const [transferFormOpen, setTransferFormOpen] = useState(false)
+  const [statementImportOpen, setStatementImportOpen] = useState(false)
   const [reverseTarget, setReverseTarget] = useState<Transaction | null>(null)
   const [filter, setFilter] = useState<Filter>('ALL')
   const [query, setQuery] = useState('')
@@ -99,6 +101,7 @@ export function TransactionsPage() {
   const totalTransactions = transactionsQuery.data?.totalElements ?? 0
 
   const canCreate = Boolean(walletsQuery.data?.length && categoriesQuery.data?.length)
+  const canImportStatement = Boolean(walletsQuery.data?.length && categoriesQuery.data?.some((category) => category.categoryType === 'INCOME') && categoriesQuery.data?.some((category) => category.categoryType === 'EXPENSE'))
   const canDisplayWorkspace = Boolean(walletsQuery.data?.length)
   const canTransfer = Boolean(walletsQuery.data?.some((wallet) => walletsQuery.data.some((candidate) => candidate.id !== wallet.id && candidate.currency === wallet.currency)))
 
@@ -107,6 +110,7 @@ export function TransactionsPage() {
       <div><p className="eyebrow">DÒNG TIỀN HẰNG NGÀY</p><h1>Giao dịch</h1><p className="page-subtitle">Ghi nhận thu nhập và chi tiêu theo từng ví. Số dư được cập nhật ngay sau khi giao dịch được tạo.</p></div>
       <div className="transaction-actions">
         <button className="secondary-button" disabled={!totalTransactions || hasInvalidDateRange || exportMutation.isPending} onClick={() => exportMutation.mutate()} title="Xuất toàn bộ giao dịch theo bộ lọc hiện tại, không chỉ trang đang xem"><Download /> {exportMutation.isPending ? 'Đang xuất...' : 'Xuất CSV'}</button>
+        <button className="secondary-button" disabled={!canImportStatement} onClick={() => setStatementImportOpen(true)} title={canImportStatement ? 'Nhập sao kê CSV sau khi xem trước' : 'Cần ít nhất một ví, danh mục thu và danh mục chi'}><FileUp /> Nhập sao kê</button>
         <button className="secondary-button" disabled={!canTransfer} onClick={() => setTransferFormOpen(true)} title={canTransfer ? 'Chuyển tiền giữa hai ví cùng loại tiền tệ' : 'Cần ít nhất hai ví cùng tiền tệ'}><ArrowLeftRight /> Chuyển tiền</button>
         <button className="primary-button" disabled={!canCreate} onClick={() => setFormOpen(true)} title={canCreate ? 'Thêm giao dịch' : 'Hãy có ví và danh mục trước'}><Plus /> Thêm giao dịch</button>
       </div>
@@ -153,6 +157,14 @@ export function TransactionsPage() {
       setTransferFormOpen(false)
       void queryClient.invalidateQueries({ queryKey: ['transactions'] })
       void queryClient.invalidateQueries({ queryKey: ['wallets'] })
+    }} />}
+    {statementImportOpen && walletsQuery.data && categoriesQuery.data && <StatementImportModal wallets={walletsQuery.data} categories={categoriesQuery.data} onClose={() => setStatementImportOpen(false)} onCompleted={() => {
+      setStatementImportOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      void queryClient.invalidateQueries({ queryKey: ['wallets'] })
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      void queryClient.invalidateQueries({ queryKey: ['financial-calendar'] })
+      void queryClient.invalidateQueries({ queryKey: ['monthly-review'] })
     }} />}
     {reverseTarget && <ReverseModal transaction={reverseTarget} isPending={reverseMutation.isPending} onCancel={() => setReverseTarget(null)} onConfirm={() => reverseMutation.mutate(reverseTarget.id)} />}
   </>

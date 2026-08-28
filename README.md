@@ -132,7 +132,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 
 ## Current status
 
-The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, monthly-review, and financial-calendar milestones are complete. The
+The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, monthly-review, financial-calendar, and bank-statement-import milestones are complete. The
 API supports account registration, login, rotating refresh tokens, owner-scoped
 wallet management, system and user-owned categories, virtual money-jar
 allocation and transfers with concurrency protection, monthly category budgets derived from
@@ -199,3 +199,10 @@ Transaction history can be exported as a Vietnamese Excel-friendly CSV using
 the active server-side filters. Export remains owner-scoped and read-only, uses
 the user's time zone for timestamps, and rejects requests above 10,000 rows
 instead of silently producing a partial file.
+
+Users can also import a bank statement CSV through a preview-first workflow.
+The client maps one wallet and its income/expense categories, then the API
+validates every row before it writes anything. A stable fingerprint becomes the
+normal transaction idempotency key, so a repeated file safely skips entries
+already recorded. Raw statement text is processed in memory only and is never
+stored as a separate document.
