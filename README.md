@@ -11,6 +11,8 @@ strong focus on financial correctness, traceability, testing, and deployment.
 - Internal transfers are not income or expenses.
 - Posted financial transactions are immutable and corrected by reversal.
 - Every balance-changing operation is atomic and auditable.
+- Users can review their own profile and financial activity history without
+  exposing another user's records.
 - Money uses `BigDecimal` and an explicit ISO currency.
 - AI may recommend, but never changes financial data without confirmation.
 
