@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
@@ -35,16 +36,19 @@ public class BudgetService {
     private final UserAccountRepository userRepository;
     private final CategoryService categoryService;
     private final TransactionReportingService transactionReportingService;
+    private final AuditLogService auditLogService;
 
     public BudgetService(
             BudgetRepository budgetRepository,
             UserAccountRepository userRepository,
             CategoryService categoryService,
-            TransactionReportingService transactionReportingService) {
+            TransactionReportingService transactionReportingService,
+            AuditLogService auditLogService) {
         this.budgetRepository = budgetRepository;
         this.userRepository = userRepository;
         this.categoryService = categoryService;
         this.transactionReportingService = transactionReportingService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional(readOnly = true)
@@ -85,26 +89,32 @@ public class BudgetService {
         Category category = categoryService.requireAvailableForTransaction(userId, request.categoryId(), CategoryType.EXPENSE);
         int warningThreshold = request.warningThreshold() == null ? DEFAULT_WARNING_THRESHOLD : request.warningThreshold();
         Budget budget = new Budget(user, category, periodStart, limitAmount, currency, warningThreshold);
+        Budget savedBudget;
         try {
-            Budget savedBudget = budgetRepository.saveAndFlush(budget);
-            return toResponse(savedBudget, BigDecimal.ZERO);
+            savedBudget = budgetRepository.saveAndFlush(budget);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateBudget();
         }
+        auditLogService.record(user, "BUDGET_CREATED", "BUDGET", savedBudget.getId(), budgetDetails(savedBudget));
+        return toResponse(savedBudget, BigDecimal.ZERO);
     }
 
     @Transactional
     public BudgetResponse update(UUID userId, UUID budgetId, UpdateBudgetRequest request) {
         Budget budget = requireOwnedBudget(userId, budgetId);
+        UserAccount user = requireUser(userId);
         BigDecimal limitAmount = request.limitAmount() == null ? null : normalizeAmount(request.limitAmount(), budget.getCurrency());
         budget.updatePlan(limitAmount, request.warningThreshold());
-        BigDecimal spent = spentForBudget(userId, budget, resolveZone(userId));
+        auditLogService.record(user, "BUDGET_UPDATED", "BUDGET", budget.getId(), budgetDetails(budget));
+        BigDecimal spent = spentForBudget(userId, budget, ZoneId.of(user.getTimeZone()));
         return toResponse(budget, spent);
     }
 
     @Transactional
     public void archive(UUID userId, UUID budgetId) {
-        requireOwnedBudget(userId, budgetId).archive();
+        Budget budget = requireOwnedBudget(userId, budgetId);
+        budget.archive();
+        auditLogService.record(requireUser(userId), "BUDGET_ARCHIVED", "BUDGET", budget.getId(), budgetDetails(budget));
     }
 
     private List<BudgetResponse> toResponses(UUID userId, List<Budget> budgets, Instant from, Instant to) {
@@ -175,8 +185,13 @@ public class BudgetService {
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
     }
 
-    private ZoneId resolveZone(UUID userId) {
-        return ZoneId.of(requireUser(userId).getTimeZone());
+    private Map<String, Object> budgetDetails(Budget budget) {
+        return Map.of(
+                "category", budget.getCategory().getName(),
+                "currency", budget.getCurrency(),
+                "periodStart", budget.getPeriodStart().toString(),
+                "limitAmount", budget.getLimitAmount().toPlainString(),
+                "warningThreshold", budget.getWarningThreshold());
     }
 
     private LocalDate validatePeriodStart(LocalDate periodStart) {

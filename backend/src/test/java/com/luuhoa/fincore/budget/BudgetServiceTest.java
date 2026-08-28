@@ -3,6 +3,7 @@ package com.luuhoa.fincore.budget;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -21,6 +22,7 @@ import java.util.UUID;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -48,11 +50,14 @@ class BudgetServiceTest {
     @Mock
     private TransactionReportingService transactionReportingService;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private BudgetService service;
 
     @BeforeEach
     void setUp() {
-        service = new BudgetService(budgetRepository, userRepository, categoryService, transactionReportingService);
+        service = new BudgetService(budgetRepository, userRepository, categoryService, transactionReportingService, auditLogService);
     }
 
     @Test
@@ -108,7 +113,11 @@ class BudgetServiceTest {
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(categoryService.requireAvailableForTransaction(userId, categoryId, CategoryType.EXPENSE)).thenReturn(category);
-        when(budgetRepository.saveAndFlush(any(Budget.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(budgetRepository.saveAndFlush(any(Budget.class))).thenAnswer(invocation -> {
+            Budget budget = invocation.getArgument(0);
+            setId(budget, UUID.randomUUID());
+            return budget;
+        });
 
         BudgetResponse response = service.create(userId, request);
 
@@ -116,6 +125,7 @@ class BudgetServiceTest {
         assertThat(response.warningThreshold()).isEqualTo(80);
         assertThat(response.status()).isEqualTo(BudgetStatus.ON_TRACK);
         verify(categoryService).requireAvailableForTransaction(userId, categoryId, CategoryType.EXPENSE);
+        verify(auditLogService).record(eq(user), eq("BUDGET_CREATED"), eq("BUDGET"), eq(response.id()), anyMap());
     }
 
     @Test
