@@ -6,6 +6,8 @@ import { activityApi } from './activityApi'
 import type { ActivityLog } from './activityTypes'
 
 const activityCopy: Record<string, { title: string; description: string; icon: typeof History }> = {
+  ACCOUNT_REGISTERED: { title: 'Đã tạo tài khoản', description: 'Tài khoản FinCore được khởi tạo', icon: UserRound },
+  LOGIN_SUCCEEDED: { title: 'Đã đăng nhập', description: 'Đăng nhập bằng mật khẩu thành công', icon: UserRound },
   PROFILE_UPDATED: { title: 'Cập nhật hồ sơ', description: 'Đã thay đổi thiết lập tài khoản', icon: UserRound },
   TRANSACTION_CREATED: { title: 'Đã ghi nhận giao dịch', description: 'Khoản thu hoặc chi mới', icon: ArrowLeftRight },
   TRANSFER_CREATED: { title: 'Đã chuyển tiền giữa các ví', description: 'Số dư ví đã được cập nhật', icon: ArrowLeftRight },

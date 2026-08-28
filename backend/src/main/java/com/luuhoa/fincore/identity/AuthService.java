@@ -61,6 +61,7 @@ public class AuthService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("EMAIL_ALREADY_EXISTS", "An account already exists for this email");
         }
+        auditLogService.record(user, "ACCOUNT_REGISTERED", "USER", user.getId(), java.util.Map.of("method", "PASSWORD"));
         return issueTokenPair(user);
     }
 
@@ -72,6 +73,7 @@ public class AuthService {
                 || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
+        auditLogService.record(user, "LOGIN_SUCCEEDED", "USER", user.getId(), java.util.Map.of("method", "PASSWORD"));
         return issueTokenPair(user);
     }
 
