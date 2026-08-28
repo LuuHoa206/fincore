@@ -178,6 +178,11 @@ The dashboard also includes a 3-to-12-month cash-flow trend built exclusively
 from posted transactions. Income, expense, and net flow remain separated by
 currency and the report never applies an assumed exchange rate.
 
+The in-app notification center surfaces current budget warnings and recurring
+items that are due or within three days. It stores only each user's read state;
+the notifications themselves are derived from live financial state and never
+post or change money automatically.
+
 Transaction history can be exported as a Vietnamese Excel-friendly CSV using
 the active server-side filters. Export remains owner-scoped and read-only, uses
 the user's time zone for timestamps, and rejects requests above 10,000 rows

@@ -20,6 +20,7 @@ const RecurringRulesPage = lazy(async () => ({ default: (await import('./feature
 const SplitBillsPage = lazy(async () => ({ default: (await import('./features/splitbills/SplitBillsPage')).SplitBillsPage }))
 const SettingsPage = lazy(async () => ({ default: (await import('./features/auth/SettingsPage')).SettingsPage }))
 const ActivityHistoryPage = lazy(async () => ({ default: (await import('./features/audit/ActivityHistoryPage')).ActivityHistoryPage }))
+const NotificationsPage = lazy(async () => ({ default: (await import('./features/notifications/NotificationsPage')).NotificationsPage }))
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
               <Route path="split-bills" element={<SplitBillsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="activity" element={<ActivityHistoryPage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

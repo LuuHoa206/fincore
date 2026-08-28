@@ -557,6 +557,35 @@ scheduled timestamp. Concurrent scheduler runs or a retry therefore cannot post
 the same occurrence twice. After recording, the next run advances to the first
 future period; missed periods are not bulk-posted after downtime.
 
+## In-app financial notifications
+
+`GET /notifications` returns the authenticated user's current attention items.
+They are generated from real recurring-rule and monthly-budget state rather
+than being a separate financial workflow. An item includes a stable `key`,
+priority (`INFO`, `WARNING`, or `CRITICAL`), title/message, destination route,
+occurrence time, and whether the user has read it.
+
+- Enabled recurring rules appear when due or within the next three days.
+- A monthly budget appears only when it is in `WARNING` or `EXCEEDED` state.
+- Recording a recurring occurrence or returning a budget to normal naturally
+  removes the corresponding item. Reading an item never changes money, a
+  budget, or a recurring rule.
+
+`GET /notifications/unread-count` returns `{ "count": 2 }` for a compact UI
+indicator. To change only the read state, send one of:
+
+```http
+PATCH /notifications/read
+PATCH /notifications/unread
+```
+
+```json
+{ "notificationKey": "recurring:2f1a...:1787850000000" }
+```
+
+The key must still refer to a current notification owned by the authenticated
+user; otherwise the API returns `404 NOTIFICATION_NOT_FOUND`.
+
 ## Split bills and reimbursements
 
 A split bill records one real expense first, then tracks only the money that
