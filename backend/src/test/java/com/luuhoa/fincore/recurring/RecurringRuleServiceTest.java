@@ -3,14 +3,18 @@ package com.luuhoa.fincore.recurring;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.category.Category;
 import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
@@ -37,6 +41,7 @@ class RecurringRuleServiceTest {
     @Mock private WalletService walletService;
     @Mock private CategoryService categoryService;
     @Mock private RecurringRuleExecutionService executionService;
+    @Mock private AuditLogService auditLogService;
 
     @Test
     void upcomingReturnsEnabledRulesInTheRequestedBoundedPage() {
@@ -64,8 +69,37 @@ class RecurringRuleServiceTest {
         assertThatIllegalArgumentException().isThrownBy(() -> service().upcoming(UUID.randomUUID(), 11));
     }
 
+    @Test
+    void recordsCreatedRuleAfterTheScheduleHasBeenValidated() {
+        UUID userId = UUID.randomUUID();
+        UUID ruleId = UUID.randomUUID();
+        UserAccount user = new UserAccount("user@example.com", "hash", "User", "VND", "Asia/Ho_Chi_Minh");
+        Wallet wallet = new Wallet(user, "Cash", WalletType.CASH, "VND", false);
+        Category category = new Category(user, "Rent", CategoryType.EXPENSE, null, null);
+        ReflectionTestUtils.setField(wallet, "id", UUID.randomUUID());
+        ReflectionTestUtils.setField(category, "id", UUID.randomUUID());
+        CreateRecurringRuleRequest request = new CreateRecurringRuleRequest(
+                "Monthly rent", wallet.getId(), category.getId(), TransactionType.EXPENSE,
+                new BigDecimal("5000000"), "Rent payment", null, RecurringFrequency.MONTHLY,
+                Instant.parse("2026-09-01T01:00:00Z"), false, true, false);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(walletService.requireOwnedActiveWallet(userId, wallet.getId())).thenReturn(wallet);
+        when(categoryService.requireAvailableForTransaction(userId, category.getId(), CategoryType.EXPENSE)).thenReturn(category);
+        when(recurringRuleRepository.save(any(RecurringRule.class))).thenAnswer(invocation -> {
+            RecurringRule saved = invocation.getArgument(0);
+            ReflectionTestUtils.setField(saved, "id", ruleId);
+            return saved;
+        });
+
+        RecurringRuleResponse response = service().create(userId, request);
+
+        assertThat(response.id()).isEqualTo(ruleId);
+        verify(auditLogService).record(eq(user), eq("RECURRING_RULE_CREATED"), eq("RECURRING_RULE"), eq(ruleId), anyMap());
+    }
+
     private RecurringRuleService service() {
-        return new RecurringRuleService(recurringRuleRepository, userRepository, walletService, categoryService, executionService);
+        return new RecurringRuleService(recurringRuleRepository, userRepository, walletService, categoryService, executionService, auditLogService);
     }
 
     private RecurringRule rule(UUID userId, Instant nextRunAt) {
