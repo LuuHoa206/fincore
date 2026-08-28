@@ -1,4 +1,4 @@
-import { Archive, ArrowDownToLine, ArrowUpFromLine, LoaderCircle, Pencil, PiggyBank, Plus, ShieldCheck, X } from 'lucide-react'
+import { Archive, ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, LoaderCircle, Pencil, PiggyBank, Plus, ShieldCheck, X } from 'lucide-react'
 import type { CSSProperties, FormEvent } from 'react'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -8,6 +8,7 @@ import { formatCurrency } from '../transactions/transactionFormatters'
 import { walletApi } from '../wallets/walletApi'
 import { moneyJarApi } from './moneyJarApi'
 import type { CreateMoneyJarInput, MoneyJar } from './moneyJarTypes'
+import { TransferBetweenJarsModal } from './TransferBetweenJarsModal'
 
 type JarForm = {
   name: string
@@ -26,6 +27,7 @@ export function MoneyJarsPage() {
   const queryClient = useQueryClient()
   const [formTarget, setFormTarget] = useState<MoneyJar | 'new' | null>(null)
   const [allocationTarget, setAllocationTarget] = useState<MoneyJar | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
   const [actionError, setActionError] = useState('')
   const jarsQuery = useQuery({ queryKey: ['money-jars'], queryFn: moneyJarApi.list })
   const walletsQuery = useQuery({ queryKey: ['wallets'], queryFn: walletApi.list })
@@ -54,7 +56,10 @@ export function MoneyJarsPage() {
   return <>
     <header className="topbar wallet-topbar">
       <div><p className="eyebrow">PHAN BO MUC TIEU</p><h1>Hũ tiền</h1><p className="page-subtitle">Chia số dư đã có trong ví thành những khoản riêng cho quỹ khẩn cấp, du lịch và các mục tiêu quan trọng.</p></div>
-      <button className="primary-button" onClick={() => setFormTarget('new')}><Plus /> Tạo hũ tiền</button>
+      <div className="topbar-actions">
+        {jars.length > 1 && <button className="secondary-button" onClick={() => setTransferOpen(true)}><ArrowLeftRight /> Chuyển giữa hũ</button>}
+        <button className="primary-button" onClick={() => setFormTarget('new')}><Plus /> Tạo hũ tiền</button>
+      </div>
     </header>
 
     {actionError && <div className="form-alert page-alert" role="alert">{actionError}<button onClick={() => setActionError('')} aria-label="Đóng"><X /></button></div>}
@@ -72,6 +77,7 @@ export function MoneyJarsPage() {
 
     {formTarget && <MoneyJarFormModal jar={formTarget === 'new' ? null : formTarget} defaultCurrency={currencies[0] ?? user?.preferredCurrency ?? 'VND'} currencies={currencies} onClose={() => setFormTarget(null)} onSaved={() => { setFormTarget(null); refresh() }} />}
     {allocationTarget && <AllocationModal jar={allocationTarget} availableToAllocate={remainingByCurrency[allocationTarget.currency] ?? 0} onClose={() => setAllocationTarget(null)} onSaved={() => { setAllocationTarget(null); refresh() }} />}
+    {transferOpen && <TransferBetweenJarsModal jars={jars} onClose={() => setTransferOpen(false)} onSaved={() => { setTransferOpen(false); refresh() }} />}
   </>
 }
 

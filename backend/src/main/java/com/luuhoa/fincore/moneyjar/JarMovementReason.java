@@ -2,5 +2,7 @@ package com.luuhoa.fincore.moneyjar;
 
 public enum JarMovementReason {
     ALLOCATION,
-    RELEASE
+    RELEASE,
+    TRANSFER_OUT,
+    TRANSFER_IN
 }

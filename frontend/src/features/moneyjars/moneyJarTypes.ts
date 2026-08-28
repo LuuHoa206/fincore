@@ -26,3 +26,9 @@ export type JarAllocationResult = {
   jar: MoneyJar
   availableToAllocate: number
 }
+
+export type JarTransferResult = {
+  sourceJar: MoneyJar
+  destinationJar: MoneyJar
+  amount: number
+}

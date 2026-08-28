@@ -70,6 +70,13 @@ public class MoneyJarController {
         return moneyJarService.release(userId(jwt), jarId, request);
     }
 
+    @PostMapping("/transfers")
+    JarTransferResponse transfer(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody TransferBetweenJarsRequest request) {
+        return moneyJarService.transfer(userId(jwt), request);
+    }
+
     private UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }

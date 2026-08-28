@@ -274,6 +274,26 @@ unassigned.
 The amount becomes available for another jar. The release is blocked if it
 would make a non-negative jar balance fall below zero.
 
+### Transfer an allocation between jars
+
+`POST /jars/transfers`
+
+```json
+{
+  "sourceJarId": "4eaedb4f-a6f9-4f6f-8148-6937182d25bd",
+  "destinationJarId": "8e67fbdf-6f2e-4fe2-b502-6d5e91e5f8f3",
+  "amount": 200000
+}
+```
+
+This rearranges an existing allocation only: it never creates a wallet
+transaction and does not change the total wallet balance. Both active jars
+must belong to the caller, use the same currency, and have different IDs. The
+source jar must have at least the requested allocated balance, even when it is
+configured to track a negative balance. The service locks the caller's active
+jars in a stable order, saves an outgoing and incoming movement together, and
+records one audit event in the same database transaction.
+
 ## Allocation rules
 
 An allocation rule distributes a future income into money jars of the same

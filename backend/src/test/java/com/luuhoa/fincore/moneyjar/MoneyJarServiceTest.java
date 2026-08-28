@@ -140,6 +140,94 @@ class MoneyJarServiceTest {
         verify(jarMovementRepository, never()).save(any());
     }
 
+    @Test
+    void transfersAllocatedBalanceBetweenTwoOwnedJarsWithoutChangingWalletBalance() {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        MoneyJar source = jar(sourceId, "Travel", "VND");
+        MoneyJar destination = jar(destinationId, "Emergency", "VND");
+        source.applyAllocation(new BigDecimal("300000"));
+        Wallet wallet = wallet("Bank", "VND", "1000000");
+
+        when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of(destination, source));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user()));
+
+        JarTransferResponse response = service.transfer(
+                userId,
+                new TransferBetweenJarsRequest(sourceId, destinationId, new BigDecimal("125000")));
+
+        assertThat(response.amount()).isEqualByComparingTo("125000");
+        assertThat(source.getAllocatedBalance()).isEqualByComparingTo("175000");
+        assertThat(destination.getAllocatedBalance()).isEqualByComparingTo("125000");
+        assertThat(wallet.getCurrentBalance()).isEqualByComparingTo("1000000");
+        verify(jarMovementRepository).saveAll(any());
+        verify(auditLogService).record(any(UserAccount.class), eq("MONEY_JAR_TRANSFERRED"), eq("MONEY_JAR"), eq(sourceId), anyMap());
+    }
+
+    @Test
+    void rejectsTransferWhenTheSourceJarDoesNotHaveEnoughAllocatedBalance() {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        MoneyJar source = jar(sourceId, "Travel", "VND");
+        MoneyJar destination = jar(destinationId, "Emergency", "VND");
+        source.applyAllocation(new BigDecimal("100"));
+
+        when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of(source, destination));
+
+        assertThatThrownBy(() -> service.transfer(
+                userId,
+                new TransferBetweenJarsRequest(sourceId, destinationId, new BigDecimal("101"))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("does not have enough allocated");
+
+        assertThat(source.getAllocatedBalance()).isEqualByComparingTo("100");
+        assertThat(destination.getAllocatedBalance()).isEqualByComparingTo("0");
+        verify(jarMovementRepository, never()).saveAll(any());
+        verify(auditLogService, never()).record(any(), any(), any(), any(), anyMap());
+    }
+
+    @Test
+    void rejectsTransferAcrossCurrenciesBeforeWritingAnyMovement() {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        MoneyJar source = jar(sourceId, "Travel", "VND");
+        MoneyJar destination = jar(destinationId, "Emergency", "USD");
+        source.applyAllocation(new BigDecimal("100"));
+
+        when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of(source, destination));
+
+        assertThatThrownBy(() -> service.transfer(
+                userId,
+                new TransferBetweenJarsRequest(sourceId, destinationId, new BigDecimal("10"))))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("same currency");
+
+        verify(jarMovementRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void transferStillRequiresSourceBalanceWhenTheSourceJarAllowsNegativeTracking() {
+        UUID userId = UUID.randomUUID();
+        UUID sourceId = UUID.randomUUID();
+        UUID destinationId = UUID.randomUUID();
+        MoneyJar source = new MoneyJar(user(), "Receivable", "VND", null, null, null, true);
+        setId(source, sourceId);
+        MoneyJar destination = jar(destinationId, "Emergency", "VND");
+
+        when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of(source, destination));
+
+        assertThatThrownBy(() -> service.transfer(
+                userId,
+                new TransferBetweenJarsRequest(sourceId, destinationId, BigDecimal.ONE)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("source money jar");
+
+        verify(jarMovementRepository, never()).saveAll(any());
+    }
+
     private MoneyJar jar(UUID jarId, String name, String currency) {
         MoneyJar jar = new MoneyJar(
                 user(),
