@@ -80,6 +80,18 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .settings-form label small { color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1.5; }
 .settings-form footer { display: flex; justify-content: flex-end; padding-top: 3px; }
 .settings-note { margin: 0; padding: 12px; border-radius: 7px; color: #596861; background: #f4f8f6; font-size: 12px; line-height: 1.6; }
+.activity-panel { max-width: 920px; }
+.activity-list { display: grid; }
+.activity-list article { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 13px; min-height: 72px; border-bottom: 1px solid #edf2f0; }
+.activity-list article:last-child { border-bottom: 0; }
+.activity-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 7px; color: var(--green-700); background: var(--green-100); }
+.activity-icon svg { width: 18px; }
+.activity-icon.action-transaction_reversed { color: #b56619; background: #fff2dd; }
+.activity-icon.action-profile_updated { color: #3c6e9f; background: #e8f2fb; }
+.activity-list article > div { min-width: 0; display: grid; gap: 4px; }
+.activity-list strong { font-size: 13px; }
+.activity-list small, .activity-list time { color: var(--muted); font-size: 11px; }
+.activity-list time { white-space: nowrap; text-align: right; }
 .success-alert { display: flex; align-items: center; gap: 8px; padding: 11px 13px; border: 1px solid #bde6d7; border-radius: 7px; color: #087c60; background: #effbf6; font-size: 12px; font-weight: 700; }
 .success-alert svg { width: 17px; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #edf2f0; }

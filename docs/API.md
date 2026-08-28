@@ -91,6 +91,21 @@ already exist.
 }
 ```
 
+## Activity history
+
+`GET /activity?limit=30`
+
+Returns the authenticated user's newest important account activities. `limit`
+defaults to `30` and accepts values from `1` to `100`. Results are always
+scoped to the access-token subject; an activity ID is never used as an access
+control mechanism.
+
+Each item includes the action, affected entity, a safe details object, and the
+time it was recorded. The current coverage includes profile updates, new
+income or expense transactions, wallet transfers, and transaction reversals.
+Audit records are written inside the business transaction so a failed financial
+write cannot leave a misleading activity record behind.
+
 ## Wallets
 
 Wallet IDs never determine access by themselves. Every query is scoped by both

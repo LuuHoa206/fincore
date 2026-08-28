@@ -145,6 +145,7 @@ cu the, khong phai ket luan gian lan.
 
 - Module so huu entity va repository cua chinh no.
 - Service duoc phep goi public service cua module khac khi can; khong truy cap truc tiep repository noi bo cua module khac.
+- Audit log la module doc lap: service nghiep vu ghi log trong cung database transaction, con API chi tra ve log cua nguoi dung dang dang nhap.
 - Khi luong nghiep vu lon hon, uu tien domain event/outbox cho audit, thong bao va reporting thay vi lam controller phinh to.
 
 ## Observability va van hanh

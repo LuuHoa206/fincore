@@ -7,6 +7,8 @@ import java.util.List;
 
 import com.luuhoa.fincore.category.CategoryController;
 import com.luuhoa.fincore.category.CategoryService;
+import com.luuhoa.fincore.audit.AuditLogController;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.allocationrule.AllocationRuleController;
 import com.luuhoa.fincore.allocationrule.AllocationRuleService;
 import com.luuhoa.fincore.budget.BudgetController;
@@ -40,6 +42,7 @@ class ThreeLayerArchitectureTest {
     void businessControllersDependOnServicesInsteadOfRepositories() {
         assertControllerUsesService(AuthController.class, AuthService.class);
         assertControllerUsesService(CurrentUserController.class, AuthService.class);
+        assertControllerUsesService(AuditLogController.class, AuditLogService.class);
         assertControllerUsesService(CategoryController.class, CategoryService.class);
         assertControllerUsesService(AllocationRuleController.class, AllocationRuleService.class);
         assertControllerUsesService(BudgetController.class, BudgetService.class);

@@ -19,6 +19,7 @@ import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.wallet.Wallet;
 import com.luuhoa.fincore.wallet.WalletService;
 import com.luuhoa.fincore.wallet.WalletTransferPair;
+import com.luuhoa.fincore.audit.AuditLogService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ public class TransactionService {
     private final UserAccountRepository userRepository;
     private final CategoryService categoryService;
     private final AllocationRuleService allocationRuleService;
+    private final AuditLogService auditLogService;
     private final List<TransactionReversalGuard> transactionReversalGuards;
 
     public TransactionService(
@@ -45,6 +47,7 @@ public class TransactionService {
             UserAccountRepository userRepository,
             CategoryService categoryService,
             AllocationRuleService allocationRuleService,
+            AuditLogService auditLogService,
             List<TransactionReversalGuard> transactionReversalGuards) {
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
@@ -52,6 +55,7 @@ public class TransactionService {
         this.userRepository = userRepository;
         this.categoryService = categoryService;
         this.allocationRuleService = allocationRuleService;
+        this.auditLogService = auditLogService;
         this.transactionReversalGuards = List.copyOf(transactionReversalGuards);
     }
 
@@ -153,6 +157,10 @@ public class TransactionService {
         if (allocationPlan != null) {
             allocationRuleService.applyIncomeAllocation(allocationPlan, transaction);
         }
+        auditLogService.record(user, "TRANSACTION_CREATED", "TRANSACTION", transaction.getId(), java.util.Map.of(
+                "type", transaction.getTransactionType().name(),
+                "amount", transaction.getAmount().toPlainString(),
+                "currency", transaction.getCurrency()));
 
         return TransactionResponse.from(transaction, wallet);
     }
@@ -192,6 +200,9 @@ public class TransactionService {
         ledgerEntryRepository.saveAll(List.of(
                 LedgerEntry.walletEntry(transfer, wallets.source(), amount.negate()),
                 LedgerEntry.walletEntry(transfer, wallets.destination(), amount)));
+        auditLogService.record(user, "TRANSFER_CREATED", "TRANSACTION", transfer.getId(), java.util.Map.of(
+                "amount", transfer.getAmount().toPlainString(),
+                "currency", transfer.getCurrency()));
 
         return TransactionResponse.from(transfer, wallets.source(), wallets.destination());
     }
@@ -210,7 +221,8 @@ public class TransactionService {
         if (walletEntries.isEmpty()) {
             throw new ResourceNotFoundException("TRANSACTION_LEDGER_NOT_FOUND", "Transaction ledger entry was not found");
         }
-        FinancialTransaction reversal = FinancialTransaction.reversalOf(original, requireUser(userId));
+        UserAccount user = requireUser(userId);
+        FinancialTransaction reversal = FinancialTransaction.reversalOf(original, user);
         TransactionResponse response;
         if (walletEntries.size() == 1) {
             LedgerEntry originalWalletEntry = walletEntries.getFirst();
@@ -252,6 +264,9 @@ public class TransactionService {
             throw new ConflictException("TRANSACTION_CANNOT_BE_REVERSED", "Transaction ledger entries are inconsistent");
         }
         original.markReversed();
+        auditLogService.record(user, "TRANSACTION_REVERSED", "TRANSACTION", reversal.getId(), java.util.Map.of(
+                "reversedTransactionId", original.getId().toString(),
+                "currency", original.getCurrency()));
 
         return response;
     }

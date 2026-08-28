@@ -19,6 +19,7 @@ import com.luuhoa.fincore.category.CategoryService;
 import com.luuhoa.fincore.category.CategoryType;
 import com.luuhoa.fincore.allocationrule.AllocationRuleService;
 import com.luuhoa.fincore.allocationrule.IncomeAllocationPlan;
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -57,11 +58,14 @@ class TransactionServiceTest {
     @Mock
     private AllocationRuleService allocationRuleService;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private TransactionService service;
 
     @BeforeEach
     void setUp() {
-        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletService, userRepository, categoryService, allocationRuleService, List.of());
+        service = new TransactionService(transactionRepository, ledgerEntryRepository, walletService, userRepository, categoryService, allocationRuleService, auditLogService, List.of());
     }
 
     @SuppressWarnings("unchecked")
@@ -185,6 +189,7 @@ class TransactionServiceTest {
         verify(categoryService, never()).requireAvailableForTransaction(userId, categoryId, CategoryType.INCOME);
         verify(transactionRepository, never()).save(any(FinancialTransaction.class));
         verify(ledgerEntryRepository, never()).saveAll(any());
+        verify(auditLogService, never()).record(any(), any(), any(), any(), any());
     }
 
     @Test
