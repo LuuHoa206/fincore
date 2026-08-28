@@ -65,6 +65,15 @@ TransactionController
 `ThreeLayerArchitectureTest` bao ve quy uoc nay: controller nghiep vu phai
 phu thuoc vao service, khong duoc inject repository.
 
+Luong `POST /api/v1/transaction-drafts/suggestion` cung dung quy uoc nay.
+`TransactionDraftAssistantController` chi xac thuc nguoi dung va nhan DTO;
+`TransactionDraftAssistantService` doc timezone qua `AuthService`, phan tich
+mot ghi chu ngan bang cac quy tac minh bach, sau do tai dung
+`CategorySuggestionService` de goi y danh muc ma nguoi dung co the xem. Luong
+nay khong co repository rieng, khong ghi entity va khong thay doi so du. Client
+phai dua de xuat vao form giao dich thong thuong va nguoi dung van phai gui
+request tao giao dich rieng co `Idempotency-Key`.
+
 Luong `GET /api/v1/reports/dashboard` cung tuan theo quy uoc nay. `DashboardController`
 chi lay nguoi dung va tham so thang, `DashboardService` phoi hop cac public
 service cua wallet, money jar, budget, saving goal va transaction. Cac tong thu

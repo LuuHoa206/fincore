@@ -16,6 +16,14 @@ strong focus on financial correctness, traceability, testing, and deployment.
 - Money uses `BigDecimal` and an explicit ISO currency.
 - AI may recommend, but never changes financial data without confirmation.
 
+## Assisted quick entry
+
+The transaction form includes an explainable, read-only quick-entry assistant.
+For example, `Coffee 45k today` can suggest an expense type, amount, date, and
+visible category. The user must explicitly apply the suggestion and submit the
+ordinary transaction form; the assistant cannot create or alter any financial
+record by itself.
+
 ## Technology
 
 - Backend: Java 21, Spring Boot 4.1, Spring Security, JPA, Flyway, PostgreSQL

@@ -419,6 +419,25 @@ target, the API reports `COMPLETED` automatically.
 
 ## Transactions
 
+### Suggest a transaction draft from a short note
+
+`POST /transaction-drafts/suggestion`
+
+```json
+{
+  "text": "Ca phe 45k hom nay",
+  "currency": "VND",
+  "currentTransactionType": "EXPENSE"
+}
+```
+
+The response may include an inferred `suggestedTransactionType`, amount, local
+date, readable signals, and up to three visible category suggestions. It is a
+read-only helper: it does not create a transaction, change a wallet balance, or
+apply any form field until the authenticated user explicitly confirms it in the
+client. The baseline recognizes common Vietnamese amount suffixes such as `k`
+and `tr`, plus `hom nay` and `hom qua`.
+
 ### List transactions
 
 `GET /transactions?page=0&size=10&transactionType=EXPENSE&query=coffee`

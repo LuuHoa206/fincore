@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, FileUp, LoaderCircle, Plus, RotateCcw, Search, WalletCards, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, FileUp, LoaderCircle, Plus, RotateCcw, Search, Sparkles, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
@@ -12,7 +12,7 @@ import type { Wallet } from '../wallets/walletTypes'
 import { StatementImportModal } from '../statementimports/StatementImportModal'
 import { transactionApi } from './transactionApi'
 import { formatCurrency, formatDateTime } from './transactionFormatters'
-import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionType } from './transactionTypes'
+import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionDraftSuggestion, TransactionType } from './transactionTypes'
 
 type Filter = 'ALL' | 'INCOME' | 'EXPENSE' | 'TRANSFER'
 
@@ -244,7 +244,9 @@ function TransferFormModal({ wallets, onClose, onSaved }: { wallets: Wallet[]; o
 function TransactionFormModal({ wallets, categories, onClose, onSaved }: { wallets: Wallet[]; categories: Category[]; onClose: () => void; onSaved: () => void }) {
   const [submitError, setSubmitError] = useState('')
   const [suggestionDescription, setSuggestionDescription] = useState('')
-  const { register, handleSubmit, control, setValue, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
+  const [quickText, setQuickText] = useState('')
+  const [draftSuggestion, setDraftSuggestion] = useState<TransactionDraftSuggestion | null>(null)
+  const { register, handleSubmit, control, setValue, getValues, formState: { errors, isSubmitting } } = useForm<TransactionForm>({
     resolver: zodResolver(transactionSchema),
     defaultValues: { walletId: wallets[0]?.id, categoryId: categories.find((category) => category.categoryType === 'EXPENSE')?.id, transactionType: 'EXPENSE', amount: undefined, description: '', notes: '', occurredAt: localDateTimeValue(), applyAllocationRule: false },
   })
@@ -259,6 +261,11 @@ function TransactionFormModal({ wallets, categories, onClose, onSaved }: { walle
     queryFn: () => categoryApi.suggest(selectedType, suggestionDescription),
     enabled: suggestionDescription.length >= 2,
     staleTime: 60_000,
+  })
+  const draftSuggestionMutation = useMutation({
+    mutationFn: transactionApi.suggestDraft,
+    onSuccess: setDraftSuggestion,
+    onError: (error) => setSubmitError(getApiErrorMessage(error, 'Khong the phan tich noi dung nhanh.')),
   })
 
   useEffect(() => {
@@ -284,10 +291,40 @@ function TransactionFormModal({ wallets, categories, onClose, onSaved }: { walle
     }
   })
 
+  const requestDraftSuggestion = () => {
+    const text = quickText.trim()
+    if (!text || !selectedWallet) return
+    setSubmitError('')
+    setDraftSuggestion(null)
+    draftSuggestionMutation.mutate({ text, currency: selectedWallet.currency, currentTransactionType: selectedType })
+  }
+
+  const applyDraftSuggestion = () => {
+    if (!draftSuggestion) return
+    setValue('description', draftSuggestion.description, { shouldDirty: true, shouldValidate: true })
+    setValue('transactionType', draftSuggestion.suggestedTransactionType, { shouldDirty: true, shouldValidate: true })
+    if (draftSuggestion.suggestedAmount !== null) {
+      setValue('amount', draftSuggestion.suggestedAmount, { shouldDirty: true, shouldValidate: true })
+    }
+    if (draftSuggestion.suggestedDate) {
+      const time = getValues('occurredAt')?.slice(11) || localDateTimeValue().slice(11)
+      setValue('occurredAt', `${draftSuggestion.suggestedDate}T${time}`, { shouldDirty: true, shouldValidate: true })
+    }
+    const category = draftSuggestion.categorySuggestions[0]
+    if (category) {
+      setValue('categoryId', category.categoryId, { shouldDirty: true, shouldValidate: true })
+    }
+  }
+
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="modal transaction-modal" role="dialog" aria-modal="true" aria-labelledby="transaction-form-title">
     <header><div><p className="eyebrow">GHI NHẬN DÒNG TIỀN</p><h2 id="transaction-form-title">Thêm giao dịch</h2></div><button className="icon-button" onClick={onClose} aria-label="Đóng"><X /></button></header>
     <form className="wallet-form" onSubmit={onSubmit} noValidate>
       {submitError && <div className="form-alert" role="alert">{submitError}</div>}
+      <section className="transaction-draft-assistant" aria-labelledby="transaction-draft-assistant-title">
+        <div className="transaction-draft-assistant-heading"><Sparkles /><div><strong id="transaction-draft-assistant-title">Trợ lý nhập nhanh</strong><small>Chỉ gợi ý; bạn xem và áp dụng trước khi lưu giao dịch.</small></div></div>
+        <div className="transaction-draft-assistant-controls"><input value={quickText} onChange={(event) => { setQuickText(event.target.value); setDraftSuggestion(null) }} placeholder="VD: Cà phê 45k hôm nay" maxLength={255} /><button type="button" className="secondary-button" onClick={requestDraftSuggestion} disabled={!quickText.trim() || !selectedWallet || draftSuggestionMutation.isPending}>{draftSuggestionMutation.isPending ? <LoaderCircle className="spin" /> : <Sparkles />} Gợi ý</button></div>
+        {draftSuggestion && <div className="transaction-draft-result" aria-live="polite"><div><strong>Đề xuất nháp</strong><p>{draftSuggestion.suggestedTransactionType === 'INCOME' ? 'Khoản thu' : 'Khoản chi'}{draftSuggestion.suggestedAmount !== null ? ` · ${formatCurrency(draftSuggestion.suggestedAmount, selectedWallet?.currency ?? 'VND')}` : ''}{draftSuggestion.suggestedDate ? ` · ${draftSuggestion.suggestedDate}` : ''}</p>{draftSuggestion.signals.length > 0 && <small>{draftSuggestion.signals.join(' · ')}</small>}</div><button type="button" className="plain-button" onClick={applyDraftSuggestion}>Áp dụng vào biểu mẫu</button></div>}
+      </section>
       <fieldset className="type-toggle"><legend>Loại giao dịch</legend><label className={selectedType === 'EXPENSE' ? 'active-expense' : ''}><input type="radio" value="EXPENSE" {...register('transactionType')} /><ArrowUpRight /> Chi tiền</label><label className={selectedType === 'INCOME' ? 'active-income' : ''}><input type="radio" value="INCOME" {...register('transactionType')} /><ArrowDownLeft /> Thu tiền</label></fieldset>
       <div className="form-row"><label><span>Ví tiền</span><select {...register('walletId')}>{wallets.map((wallet) => <option key={wallet.id} value={wallet.id}>{wallet.name} · {formatCurrency(wallet.currentBalance, wallet.currency)}</option>)}</select>{errors.walletId && <small className="field-error">{errors.walletId.message}</small>}</label><label><span>Số tiền {selectedWallet ? `(${selectedWallet.currency})` : ''}</span><input type="number" min="1" step={selectedWallet?.currency === 'VND' ? '1' : '0.01'} placeholder="0" {...register('amount')} />{errors.amount && <small className="field-error">{errors.amount.message}</small>}</label></div>
       <label><span>Danh mục</span><select {...register('categoryId')}>{availableCategories.map((category) => <option key={category.id} value={category.id}>{category.name}{category.systemCategory ? ' · Mặc định' : ''}</option>)}</select>{errors.categoryId && <small className="field-error">{errors.categoryId.message}</small>}</label>

@@ -1,8 +1,12 @@
 import axios from 'axios'
 import { httpClient } from '../../shared/api/httpClient'
-import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionListParams, TransactionPage } from './transactionTypes'
+import type { CreateTransactionInput, CreateWalletTransferInput, Transaction, TransactionDraftSuggestion, TransactionDraftSuggestionInput, TransactionListParams, TransactionPage } from './transactionTypes'
 
 export const transactionApi = {
+  suggestDraft: async (input: TransactionDraftSuggestionInput) => {
+    const { data } = await httpClient.post<TransactionDraftSuggestion>('/transaction-drafts/suggestion', input)
+    return data
+  },
   list: async (params: TransactionListParams = {}) => {
     const { data } = await httpClient.get<TransactionPage>('/transactions', { params })
     return data

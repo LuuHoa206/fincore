@@ -37,6 +37,8 @@ import com.luuhoa.fincore.recurring.RecurringRuleService;
 import com.luuhoa.fincore.reconciliation.WalletReconciliationController;
 import com.luuhoa.fincore.reconciliation.WalletReconciliationService;
 import com.luuhoa.fincore.transaction.TransactionController;
+import com.luuhoa.fincore.transaction.TransactionDraftAssistantController;
+import com.luuhoa.fincore.transaction.TransactionDraftAssistantService;
 import com.luuhoa.fincore.transaction.TransactionService;
 import com.luuhoa.fincore.wallet.WalletController;
 import com.luuhoa.fincore.wallet.WalletService;
@@ -68,6 +70,7 @@ class ThreeLayerArchitectureTest {
         assertControllerUsesService(WalletReconciliationController.class, WalletReconciliationService.class);
         assertControllerUsesService(WalletController.class, WalletService.class);
         assertControllerUsesService(TransactionController.class, TransactionService.class);
+        assertControllerUsesService(TransactionDraftAssistantController.class, TransactionDraftAssistantService.class);
     }
 
     private void assertControllerUsesService(Class<?> controllerType, Class<?> serviceType) {

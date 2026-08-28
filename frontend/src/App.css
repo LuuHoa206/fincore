@@ -470,6 +470,20 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .category-suggestions > div:first-child { display: grid; gap: 3px; }
 .category-suggestions > div:first-child strong { color: var(--green-700); font-size: 12px; }
 .category-suggestions > div:first-child small { color: #67877c; font-size: 10px; }
+.transaction-draft-assistant { display: grid; gap: 10px; padding: 13px; border: 1px solid #bfe8da; border-radius: 7px; background: #f4fbf8; }
+.transaction-draft-assistant-heading { display: flex; gap: 9px; align-items: flex-start; color: var(--green-700); }
+.transaction-draft-assistant-heading svg { width: 17px; margin-top: 1px; }
+.transaction-draft-assistant-heading div { display: grid; gap: 2px; }
+.transaction-draft-assistant-heading strong { font-size: 13px; }
+.transaction-draft-assistant-heading small, .transaction-draft-result small { color: #67877c; font-size: 11px; }
+.transaction-draft-assistant-controls { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.transaction-draft-assistant-controls input { min-width: 0; }
+.transaction-draft-assistant-controls button { min-height: 45px; }
+.transaction-draft-result { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding-top: 10px; border-top: 1px solid #d8eee5; }
+.transaction-draft-result div { display: grid; gap: 3px; }
+.transaction-draft-result strong { color: var(--ink); font-size: 12px; }
+.transaction-draft-result p { margin: 0; color: #425a52; font-size: 12px; }
+@media (max-width: 560px) { .transaction-draft-assistant-controls { grid-template-columns: 1fr; } .transaction-draft-result { align-items: flex-start; flex-direction: column; } }
 .category-suggestion-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .category-suggestion-list button { display: grid; gap: 3px; min-width: 130px; padding: 9px 11px; border: 1px solid #b8dfd2; border-radius: 6px; color: #3f5e53; background: #fff; text-align: left; }
 .category-suggestion-list button:hover, .category-suggestion-list button.selected { border-color: var(--green-600); background: #e6f8f1; }
