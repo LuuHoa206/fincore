@@ -476,6 +476,28 @@ transaction service and skips duplicated rows. A deterministic statement
 fingerprint is used as the transaction idempotency key, so retrying the same
 confirmation never changes a wallet balance twice. Raw CSV text is not stored.
 
+## Wallet reconciliation
+
+### Preview a statement balance reconciliation
+
+`POST /wallet-reconciliations/preview`
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "statementDate": "2026-08-26",
+  "statementBalance": 1250000
+}
+```
+
+The selected date is interpreted in the authenticated user's configured time
+zone. The API sums the wallet's ledger entries for transactions occurring before
+the next local day, then returns the ledger balance, statement balance,
+`difference = statementBalance - ledgerBalance`, and number of included
+transactions. `MATCHED` means the difference is exactly zero; `DIFFERENT` does
+not alter any wallet, transaction, ledger entry, or audit data. Future statement
+dates are rejected.
+
 ### Record income or expense
 
 `POST /transactions`

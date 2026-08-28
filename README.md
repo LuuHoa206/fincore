@@ -132,7 +132,7 @@ Remove-Item Env:RUN_INTEGRATION_TESTS
 
 ## Current status
 
-The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, monthly-review, financial-calendar, and bank-statement-import milestones are complete. The
+The identity, wallet, transaction, category, money-jar, monthly-budget, saving-goal, reporting, notification, monthly-review, financial-calendar, bank-statement-import, and wallet-reconciliation milestones are complete. The
 API supports account registration, login, rotating refresh tokens, owner-scoped
 wallet management, system and user-owned categories, virtual money-jar
 allocation and transfers with concurrency protection, monthly category budgets derived from
@@ -206,3 +206,8 @@ validates every row before it writes anything. A stable fingerprint becomes the
 normal transaction idempotency key, so a repeated file safely skips entries
 already recorded. Raw statement text is processed in memory only and is never
 stored as a separate document.
+
+Wallet reconciliation compares a statement closing balance with the ledger
+balance through the end of the selected day in the user's time zone. It reports
+the exact difference and number of included transactions, but never creates an
+automatic adjustment; financial corrections must remain explicit transactions.
