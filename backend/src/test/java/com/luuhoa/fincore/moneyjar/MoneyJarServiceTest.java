@@ -3,6 +3,8 @@ package com.luuhoa.fincore.moneyjar;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,8 +12,10 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import com.luuhoa.fincore.audit.AuditLogService;
 import com.luuhoa.fincore.identity.UserAccount;
 import com.luuhoa.fincore.identity.UserAccountRepository;
 import com.luuhoa.fincore.shared.api.ConflictException;
@@ -41,11 +45,14 @@ class MoneyJarServiceTest {
     @Mock
     private UserAccountRepository userRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
     private MoneyJarService service;
 
     @BeforeEach
     void setUp() {
-        service = new MoneyJarService(moneyJarRepository, jarMovementRepository, walletService, userRepository);
+        service = new MoneyJarService(moneyJarRepository, jarMovementRepository, walletService, userRepository, auditLogService);
     }
 
     @Test
@@ -59,6 +66,7 @@ class MoneyJarServiceTest {
 
         when(walletService.lockActiveWalletsForAllocation(userId)).thenReturn(List.of(bankWallet));
         when(moneyJarRepository.findAllActiveByUserIdForUpdate(userId)).thenReturn(List.of(emergencyJar, travelJar));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user()));
 
         JarAllocationResponse response = service.allocate(
                 userId,
@@ -69,6 +77,7 @@ class MoneyJarServiceTest {
         assertThat(response.availableToAllocate()).isEqualByComparingTo("250000");
         assertThat(bankWallet.getCurrentBalance()).isEqualByComparingTo("1000000");
         verify(jarMovementRepository).save(any(JarMovement.class));
+        verify(auditLogService).record(any(UserAccount.class), eq("MONEY_JAR_ALLOCATION_ADDED"), eq("MONEY_JAR"), eq(jarId), anyMap());
     }
 
     @Test
@@ -133,7 +142,7 @@ class MoneyJarServiceTest {
 
     private MoneyJar jar(UUID jarId, String name, String currency) {
         MoneyJar jar = new MoneyJar(
-                new UserAccount("owner@example.com", "hash", "Owner", "VND", "Asia/Ho_Chi_Minh"),
+                user(),
                 name,
                 currency,
                 null,
@@ -146,13 +155,17 @@ class MoneyJarServiceTest {
 
     private Wallet wallet(String name, String currency, String balance) {
         Wallet wallet = new Wallet(
-                new UserAccount("owner@example.com", "hash", "Owner", "VND", "Asia/Ho_Chi_Minh"),
+                user(),
                 name,
                 WalletType.BANK,
                 currency,
                 false);
         wallet.applyBalance(new BigDecimal(balance));
         return wallet;
+    }
+
+    private UserAccount user() {
+        return new UserAccount("owner@example.com", "hash", "Owner", "VND", "Asia/Ho_Chi_Minh");
     }
 
     private void setId(MoneyJar jar, UUID id) {
