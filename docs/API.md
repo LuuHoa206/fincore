@@ -752,6 +752,26 @@ At least one non-blank field is required. A user has one review per month; a
 later save updates only their note. This endpoint never creates a transaction,
 changes a wallet balance, updates a budget, or changes a savings goal.
 
+## Financial calendar
+
+### View a month of recorded and scheduled cash flow
+
+`GET /financial-calendar?period=2026-08`
+
+Returns all dates in the selected `YYYY-MM` month in the authenticated user's
+configured time zone. Each entry has a `kind`:
+
+- `ACTUAL` is a `POSTED` ledger transaction and therefore already affects a
+  wallet balance.
+- `SCHEDULED` is calculated from an enabled recurring rule. Only future
+  occurrences are returned; it is read-only and does not create a transaction,
+  reserve money, or advance the recurring rule.
+
+Recorded reversal entries remain visible as their own posted correction, while
+the reversed original is excluded. At most 500 posted records are returned for
+one month so the calendar remains a bounded read view rather than a transaction
+history export.
+
 ## Error format
 
 Validation and business errors share one response shape:

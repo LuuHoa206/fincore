@@ -23,6 +23,13 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
     List<FinancialTransaction> findTop5ByUserIdOrderByOccurredAtDesc(UUID userId);
 
     @EntityGraph(attributePaths = {"category", "reversedTransaction"})
+    List<FinancialTransaction> findTop500ByUserIdAndStatusAndOccurredAtGreaterThanEqualAndOccurredAtLessThanOrderByOccurredAtAsc(
+            UUID userId,
+            TransactionStatus status,
+            Instant fromTime,
+            Instant toTime);
+
+    @EntityGraph(attributePaths = {"category", "reversedTransaction"})
     @Query("""
             select transaction
             from FinancialTransaction transaction

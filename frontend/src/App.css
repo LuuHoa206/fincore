@@ -688,6 +688,40 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .auth-switch a { color: var(--green-700); font-weight: 800; }
 .session-loading { min-height: 100vh; display: grid; place-items: center; color: var(--green-700); }
 
+.financial-calendar-topbar { align-items: flex-start; }
+.calendar-toolbar { display: flex; align-items: center; gap: 8px; }
+.financial-calendar-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; margin-bottom: 20px; padding: 14px 18px; color: #526987; font-size: 13px; }
+.financial-calendar-legend > div { display: inline-flex; align-items: center; gap: 8px; }
+.calendar-legend-dot { width: 9px; height: 9px; border-radius: 999px; }
+.calendar-legend-dot.actual { background: #0f8f72; }
+.calendar-legend-dot.scheduled { border: 2px solid #3b82f6; background: #e9f2ff; }
+.calendar-legend-links { margin-left: auto; }
+.calendar-legend-links a { display: inline-flex; align-items: center; gap: 6px; color: var(--green-700); font-weight: 800; text-decoration: none; }
+.calendar-legend-links svg { width: 15px; height: 15px; }
+.financial-calendar { overflow-x: auto; padding: 0; }
+.financial-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(150px, 1fr)); min-width: 1050px; border-top: 1px solid #e5eeea; border-left: 1px solid #e5eeea; }
+.financial-calendar-weekday { padding: 13px 16px; border-right: 1px solid #e5eeea; border-bottom: 1px solid #e5eeea; background: #f3fbf8; color: #526987; font-size: 12px; font-weight: 900; text-align: center; }
+.financial-calendar-day, .financial-calendar-empty-day { min-height: 168px; padding: 10px; border-right: 1px solid #e5eeea; border-bottom: 1px solid #e5eeea; background: #fff; }
+.financial-calendar-empty-day { background: #f8fbfa; }
+.financial-calendar-day > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.financial-calendar-day time { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 999px; color: #253a51; font-size: 13px; font-weight: 900; }
+.financial-calendar-day.is-today time { background: #0f8f72; color: #fff; box-shadow: 0 5px 12px rgba(15, 143, 114, .2); }
+.financial-calendar-day > header span { color: #0f8f72; font-size: 10px; font-weight: 900; }
+.financial-calendar-day-events { display: grid; gap: 7px; }
+.financial-calendar-entry { position: relative; min-width: 0; padding: 8px; border: 1px solid #dce9e4; border-left: 3px solid #0f8f72; border-radius: 7px; background: #fbfefd; }
+.financial-calendar-entry.scheduled { border-left-color: #3b82f6; background: #f7fbff; }
+.financial-calendar-entry.expense.actual { border-left-color: #e05a47; }
+.financial-calendar-entry.expense.scheduled { border-left-color: #d58725; }
+.calendar-entry-heading { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.calendar-entry-heading span { display: grid; flex: 0 0 auto; color: #0f8f72; }
+.scheduled .calendar-entry-heading span { color: #3b82f6; }
+.calendar-entry-heading svg { width: 13px; height: 13px; }
+.calendar-entry-heading strong { overflow: hidden; color: #253a51; font-size: 12px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.financial-calendar-entry small { display: block; overflow: hidden; margin: 4px 0; color: #71839b; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.financial-calendar-entry b { display: block; color: #0f8f72; font-size: 12px; }
+.financial-calendar-entry.expense b { color: #d04b3b; }
+.financial-calendar-entry em { display: inline-block; margin-top: 5px; color: #72839a; font-size: 9px; font-style: normal; font-weight: 800; }
+
 @media (max-width: 1100px) {
   .summary-grid { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
@@ -733,6 +767,10 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
   .monthly-review-summary { grid-template-columns: 1fr; }
   .monthly-review-notes footer { align-items: stretch; flex-direction: column; }
   .monthly-review-notes footer .primary-button { width: 100%; }
+  .financial-calendar-topbar { display: grid; }
+  .calendar-toolbar { justify-content: flex-start; }
+  .financial-calendar-legend { align-items: flex-start; flex-direction: column; }
+  .calendar-legend-links { margin-left: 0; }
   .cash-flow-summary-item { grid-template-columns: 1fr; gap: 10px; }
   .cash-flow-summary-item > small { padding-bottom: 4px; border-bottom: 1px solid #e5eeea; }
   .cash-flow-occurrence { grid-template-columns: 34px minmax(0, 1fr); }

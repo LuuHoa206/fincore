@@ -80,3 +80,11 @@ thể được gắn hai lần vào công nợ.
   total; those values remain derived from the financial ledger at read time.
 - Unique key: `(user_id, period_start)`, which permits one editable review per
   user and calendar month.
+
+## Financial calendar read model
+
+The financial calendar deliberately has no persisted table. Its days and
+entries are generated from `financial_transactions` with status `POSTED` and
+enabled `recurring_transaction_rules`. This keeps the calendar consistent with
+the ledger and rule schedule, without copying monetary facts into another
+mutable data store.

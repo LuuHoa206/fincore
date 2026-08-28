@@ -73,6 +73,24 @@ public class TransactionService {
                 .toList();
     }
 
+    /**
+     * Returns completed postings in chronological order for read-only views
+     * such as the finance calendar. Reversed source transactions are excluded;
+     * their posted reversal remains visible as the correcting entry.
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionResponse> listPostedInRange(UUID userId, Instant fromTime, Instant toTime) {
+        if (fromTime == null || toTime == null || !fromTime.isBefore(toTime)) {
+            throw new IllegalArgumentException("from must be before to");
+        }
+        return transactionRepository
+                .findTop500ByUserIdAndStatusAndOccurredAtGreaterThanEqualAndOccurredAtLessThanOrderByOccurredAtAsc(
+                        userId, TransactionStatus.POSTED, fromTime, toTime)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public TransactionPageResponse search(
             UUID userId,
