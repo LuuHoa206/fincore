@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
 import { AuthShell } from './AuthPage'
+import { getAuthenticationRedirect } from './authRedirect'
 import { useAuth } from './authContextState'
 
 const registerSchema = z.object({
@@ -19,6 +20,7 @@ type RegisterForm = z.infer<typeof registerSchema>
 export function RegisterPage() {
   const { user, register: createAccount } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [showPassword, setShowPassword] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
@@ -29,11 +31,13 @@ export function RegisterPage() {
     return <Navigate to="/" replace />
   }
 
+  const from = getAuthenticationRedirect(location.state)
+
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError('')
     try {
       await createAccount({ ...values, preferredCurrency: 'VND', timeZone: 'Asia/Ho_Chi_Minh' })
-      navigate('/', { replace: true })
+      navigate(from, { replace: true })
     } catch (error) {
       setSubmitError(getApiErrorMessage(error, 'Không thể tạo tài khoản.'))
     }
@@ -68,7 +72,7 @@ export function RegisterPage() {
           {isSubmitting ? <LoaderCircle className="spin" /> : <>Tạo tài khoản <ArrowRight /></>}
         </button>
       </form>
-      <p className="auth-switch">Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
+      <p className="auth-switch">Đã có tài khoản? <Link to="/login" state={location.state}>Đăng nhập</Link></p>
     </AuthShell>
   )
 }

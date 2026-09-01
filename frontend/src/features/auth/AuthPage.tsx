@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
+import { getAuthenticationRedirect } from './authRedirect'
 import { useAuth } from './authContextState'
 
 const loginSchema = z.object({
@@ -28,7 +29,7 @@ export function LoginPage() {
     return <Navigate to="/" replace />
   }
 
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  const from = getAuthenticationRedirect(location.state)
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError('')
@@ -64,7 +65,7 @@ export function LoginPage() {
           {isSubmitting ? <LoaderCircle className="spin" /> : <>Đăng nhập <ArrowRight /></>}
         </button>
       </form>
-      <p className="auth-switch">Chưa có tài khoản? <Link to="/register">Tạo tài khoản</Link></p>
+      <p className="auth-switch">Chưa có tài khoản? <Link to="/register" state={location.state}>Tạo tài khoản</Link></p>
     </AuthShell>
   )
 }

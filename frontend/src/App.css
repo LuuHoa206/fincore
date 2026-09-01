@@ -458,6 +458,12 @@ h2 { margin-bottom: 0; font-size: 19px; letter-spacing: 0; }
 .content-state { min-height: 330px; display: grid; place-items: center; align-content: center; gap: 10px; padding: 34px; border: 1px dashed #cbdcd5; border-radius: 8px; color: var(--muted); background: #fff; text-align: center; }
 .route-loading { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 10px; color: var(--muted); background: #f5faf8; font-size: 13px; }
 .route-loading svg { width: 28px; color: var(--green-600); }
+.application-error { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 12px; padding: 24px; color: var(--ink); text-align: center; background: #f5faf8; }
+.application-error > svg { width: 34px; height: 34px; color: #bf5a2d; }
+.application-error h1 { margin: 0; font-size: 22px; }
+.application-error p { max-width: 420px; margin: 0; color: var(--muted); }
+.application-error > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 6px; }
+.application-error .primary-button, .application-error .secondary-button { min-height: 40px; }
 .content-state > svg { width: 34px; color: var(--green-600); }
 .content-state strong { color: var(--ink); font-size: 17px; }
 .content-state p { max-width: 420px; margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
