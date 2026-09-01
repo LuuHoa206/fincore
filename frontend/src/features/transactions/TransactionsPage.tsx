@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronLeft, ChevronRight, CircleAlert, Download, FileText, FileUp, LoaderCircle, Plus, RotateCcw, Search, Sparkles, WalletCards, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import { getApiErrorMessage } from '../../shared/api/apiError'
 import { categoryApi } from '../categories/categoryApi'
@@ -104,6 +105,8 @@ export function TransactionsPage() {
   const canImportStatement = Boolean(walletsQuery.data?.length && categoriesQuery.data?.some((category) => category.categoryType === 'INCOME') && categoriesQuery.data?.some((category) => category.categoryType === 'EXPENSE'))
   const canDisplayWorkspace = Boolean(walletsQuery.data?.length)
   const canTransfer = Boolean(walletsQuery.data?.some((wallet) => walletsQuery.data.some((candidate) => candidate.id !== wallet.id && candidate.currency === wallet.currency)))
+  const prerequisitesLoading = walletsQuery.isPending || categoriesQuery.isPending
+  const prerequisitesFailed = walletsQuery.isError || categoriesQuery.isError
 
   return <>
     <header className="topbar transaction-topbar">
@@ -117,12 +120,12 @@ export function TransactionsPage() {
     </header>
 
     {actionError && <div className="form-alert page-alert" role="alert">{actionError}<button onClick={() => setActionError('')} aria-label="Đóng"><X /></button></div>}
-    {walletsQuery.isError && <div className="form-alert page-alert" role="alert">{getApiErrorMessage(walletsQuery.error, 'Không thể tải danh sách ví.')}</div>}
-    {categoriesQuery.isError && <div className="form-alert page-alert" role="alert">{getApiErrorMessage(categoriesQuery.error, 'Không thể tải danh mục.')}</div>}
-    {!walletsQuery.isPending && !walletsQuery.data?.length && <section className="content-state"><WalletCards /><strong>Chưa có ví để ghi giao dịch</strong><p>Tạo ít nhất một ví tiền trước khi thêm khoản thu hoặc chi đầu tiên.</p></section>}
-    {!categoriesQuery.isPending && !categoriesQuery.data?.length && <section className="content-state"><FileText /><strong>Chưa có danh mục để ghi giao dịch</strong><p>Hãy tạo một danh mục thu hoặc chi trước khi ghi nhận giao dịch.</p></section>}
+    {prerequisitesLoading && <section className="content-state"><LoaderCircle className="spin" /><span>Đang chuẩn bị dữ liệu để ghi giao dịch</span></section>}
+    {!prerequisitesLoading && prerequisitesFailed && <section className="content-state error-state"><CircleAlert /><strong>Chưa thể chuẩn bị biểu mẫu giao dịch</strong><p>{getApiErrorMessage(walletsQuery.error ?? categoriesQuery.error, 'Vui lòng thử lại.')}</p><button className="secondary-button" onClick={() => { void walletsQuery.refetch(); void categoriesQuery.refetch() }}>Thử lại</button></section>}
+    {!prerequisitesLoading && !prerequisitesFailed && !walletsQuery.data?.length && <section className="content-state"><WalletCards /><strong>Hãy tạo ví tiền đầu tiên</strong><p>Ví là nơi ghi nhận số dư trước khi bạn thêm khoản thu, chi hoặc nhập sao kê.</p><Link className="primary-button" to="/wallets">Tạo ví tiền</Link></section>}
+    {!prerequisitesLoading && !prerequisitesFailed && !!walletsQuery.data?.length && !categoriesQuery.data?.length && <section className="content-state"><FileText /><strong>Hãy tạo danh mục trước</strong><p>Danh mục giúp phân loại khoản thu và chi để ngân sách, báo cáo và hũ tiền hoạt động chính xác.</p><Link className="primary-button" to="/categories">Tạo danh mục</Link></section>}
 
-    {canDisplayWorkspace && <section className="panel transactions-workspace">
+    {!prerequisitesLoading && !prerequisitesFailed && canDisplayWorkspace && <section className="panel transactions-workspace">
       <div className="transaction-tools">
         <label className="transaction-search"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(0) }} placeholder="Tìm theo nội dung, danh mục hoặc ghi chú" /></label>
         <div className="transaction-filter-controls" aria-label="Lọc theo ngày">
