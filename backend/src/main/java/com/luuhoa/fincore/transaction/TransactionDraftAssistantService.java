@@ -18,6 +18,7 @@ import com.luuhoa.fincore.category.CategoryType;
 import com.luuhoa.fincore.identity.AuthService;
 import com.luuhoa.fincore.identity.UserResponse;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ public class TransactionDraftAssistantService {
     private final CategorySuggestionService categorySuggestionService;
     private final Clock clock;
 
+    @Autowired
     public TransactionDraftAssistantService(
             AuthService authService,
             CategorySuggestionService categorySuggestionService) {
