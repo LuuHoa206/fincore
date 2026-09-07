@@ -3,6 +3,7 @@ package com.luuhoa.fincore.transaction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -203,7 +204,16 @@ class TransactionServiceTest {
         LedgerEntry entry = LedgerEntry.walletEntry(transaction, wallet, new BigDecimal("-50000"));
         PageRequest pageRequest = PageRequest.of(1, 10, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "occurredAt"));
 
-        when(transactionRepository.searchByUser(userId, TransactionType.EXPENSE, "lunch", null, null, pageRequest))
+        when(transactionRepository.searchByUser(
+                userId,
+                true,
+                TransactionType.EXPENSE,
+                "lunch",
+                false,
+                Instant.EPOCH,
+                false,
+                Instant.EPOCH,
+                pageRequest))
                 .thenReturn(new PageImpl<>(List.of(transaction), pageRequest, 11));
         when(ledgerEntryRepository.findAllByTransactionIdAndAccountKind(transaction.getId(), AccountKind.WALLET))
                 .thenReturn(List.of(entry));
@@ -303,7 +313,8 @@ class TransactionServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("between 1 and 50");
 
-        verify(transactionRepository, never()).searchByUser(any(), any(), any(), any(), any(), any());
+        verify(transactionRepository, never()).searchByUser(
+                any(), anyBoolean(), any(), any(), anyBoolean(), any(), anyBoolean(), any(), any());
     }
 
     @SuppressWarnings("unchecked")

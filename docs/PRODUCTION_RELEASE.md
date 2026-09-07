@@ -48,6 +48,12 @@ visibility and read access so the deployment server can pull the images. For a
 private package, authenticate the server once using a least-privilege GitHub
 token with `read:packages`.
 
+The Compose stack uses the PostgreSQL 18 volume layout and mounts persistent
+storage at `/var/lib/postgresql`. Do not change it back to
+`/var/lib/postgresql/data`; that path is for PostgreSQL 17 and earlier. A real
+upgrade from an older PostgreSQL major version requires a database backup or
+`pg_upgrade`, not only an image-tag change.
+
 ## Release and smoke checks
 
 1. Merge reviewed changes from `dev` into `main`.

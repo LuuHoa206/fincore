@@ -109,6 +109,21 @@ class TransactionConcurrencyIntegrationTests {
         assertThat(transactionRepository.findTop100ByUserIdOrderByOccurredAtDesc(fixture.userId())).hasSize(4);
     }
 
+    @Test
+    void listsTransactionsWhenAllOptionalFiltersAreAbsent() {
+        Fixture fixture = createFixture(BigDecimal.ZERO);
+        transactionService.create(
+                fixture.userId(),
+                request(fixture, TransactionType.INCOME, new BigDecimal("100000")),
+                "postgres-unfiltered-search-" + UUID.randomUUID());
+
+        TransactionPageResponse result = transactionService.search(
+                fixture.userId(), null, null, null, null, 0, 10);
+
+        assertThat(result.content()).hasSize(1);
+        assertThat(result.totalElements()).isEqualTo(1);
+    }
+
     private List<TransactionResponse> runConcurrently(int requestCount, Callable<TransactionResponse> task) throws Exception {
         List<Callable<TransactionResponse>> tasks = new ArrayList<>();
         for (int index = 0; index < requestCount; index++) {
