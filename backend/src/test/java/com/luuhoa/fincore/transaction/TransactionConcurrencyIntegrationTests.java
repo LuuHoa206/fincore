@@ -160,14 +160,16 @@ class TransactionConcurrencyIntegrationTests {
         Wallet wallet = new Wallet(user, "Wallet " + suffix, WalletType.BANK, "VND", false);
         wallet.applyBalance(openingBalance);
         wallet = walletRepository.saveAndFlush(wallet);
-        Category category = categoryRepository.saveAndFlush(new Category(
+        Category expenseCategory = categoryRepository.saveAndFlush(new Category(
                 user, "Expenses " + suffix, CategoryType.EXPENSE, "receipt", "#111111"));
-        return new Fixture(user.getId(), wallet.getId(), category.getId());
+        Category incomeCategory = categoryRepository.saveAndFlush(new Category(
+                user, "Income " + suffix, CategoryType.INCOME, "wallet", "#222222"));
+        return new Fixture(user.getId(), wallet.getId(), expenseCategory.getId(), incomeCategory.getId());
     }
 
     private CreateTransactionRequest request(Fixture fixture, TransactionType type, BigDecimal amount) {
         return new CreateTransactionRequest(
-                fixture.walletId(), fixture.categoryId(), type, amount, "Concurrent financial write", null, Instant.now(), false);
+                fixture.walletId(), fixture.categoryIdFor(type), type, amount, "Concurrent financial write", null, Instant.now(), false);
     }
 
     private long count(String sql, UUID transactionId) {
@@ -180,6 +182,10 @@ class TransactionConcurrencyIntegrationTests {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    private record Fixture(UUID userId, UUID walletId, UUID categoryId) {
+    private record Fixture(UUID userId, UUID walletId, UUID expenseCategoryId, UUID incomeCategoryId) {
+
+        UUID categoryIdFor(TransactionType type) {
+            return type == TransactionType.INCOME ? incomeCategoryId : expenseCategoryId;
+        }
     }
 }
