@@ -2,7 +2,8 @@
 
 Base path: `/api/v1`
 
-All request and response bodies use JSON. Protected endpoints require:
+All request and response bodies use JSON unless an endpoint explicitly returns
+a downloadable file. Protected endpoints require:
 
 ```http
 Authorization: Bearer <access-token>
@@ -13,6 +14,12 @@ stored as SHA-256 hashes, rotated after use, and expire after 30 days by
 default. The durations are configurable through environment variables.
 
 ## Authentication
+
+Public authentication endpoints are protected by a per-instance rate limit.
+`POST /auth/register`, `POST /auth/login` and `POST /auth/refresh` allow 10
+attempts per source IP and endpoint each minute by default. A rejected request
+returns `429 Too Many Requests`, the `AUTH_RATE_LIMITED` error code and a
+`Retry-After` header.
 
 ### Register
 
@@ -68,6 +75,41 @@ Use the same request body as refresh. The operation is idempotent and returns
 
 Returns the profile that belongs to the access-token subject.
 
+### Update profile
+
+`PUT /users/me`
+
+Updates the authenticated user's display name, default currency for new forms,
+and IANA time zone. It does not convert balances, wallets, or transactions that
+already exist.
+
+```json
+{
+  "displayName": "Luu Hoa",
+  "preferredCurrency": "VND",
+  "timeZone": "Asia/Ho_Chi_Minh"
+}
+```
+
+## Activity history
+
+`GET /activity?limit=30`
+
+Returns the authenticated user's newest important account activities. `limit`
+defaults to `30` and accepts values from `1` to `100`. Results are always
+scoped to the access-token subject; an activity ID is never used as an access
+control mechanism.
+
+Each item includes the action, affected entity, a safe details object, and the
+time it was recorded. The current coverage includes account registration,
+successful password logins, profile updates, wallet and category changes,
+money-jar, saving-goal, monthly-budget, and income-allocation-rule changes,
+recurring-rule changes, manual money-jar allocations/releases, new income or
+expense transactions, split-bill creation and reimbursements, wallet transfers,
+and transaction reversals.
+Audit records are written inside the business transaction so a failed financial
+write cannot leave a misleading activity record behind.
+
 ## Wallets
 
 Wallet IDs never determine access by themselves. Every query is scoped by both
@@ -121,6 +163,741 @@ Currency and balance are not editable through this endpoint.
 
 Returns `204 No Content`. The wallet is archived, not physically deleted, so
 future transaction history can continue to reference it.
+
+## Categories
+
+### Suggest a category from a transaction description
+
+`GET /categories/suggestions?type=EXPENSE&description=An%20com%20trua`
+
+Returns up to three visible categories whose names or baseline rule keywords
+match the provided description. Each result includes a human-readable reason.
+This is an explainable assistant only: it does not create a category, change a
+form value, or write a transaction. The client must let the user choose a
+suggestion explicitly.
+
+Category responses include system defaults (`systemCategory: true`) and the
+authenticated user's own active categories. System defaults are read-only;
+users can create, update, and archive only their own categories.
+
+### List available categories
+
+`GET /categories?type=EXPENSE`
+
+The optional `type` is `INCOME` or `EXPENSE`. Without it, both types are
+returned.
+
+### Create a category
+
+`POST /categories`
+
+```json
+{
+  "name": "Pet care",
+  "categoryType": "EXPENSE",
+  "icon": "paw-print",
+  "color": "#7C3AED"
+}
+```
+
+Names are unique per owner and category type, ignoring letter case.
+
+### Update or archive an owned category
+
+`PATCH /categories/{categoryId}` and `DELETE /categories/{categoryId}`
+
+Archive returns `204 No Content`. Archived categories cannot be selected for
+new transactions, while existing transaction history remains intact.
+
+## Money jars
+
+Money jars are envelopes for a purpose such as emergency savings or travel.
+They allocate already-owned wallet balance without changing the wallet balance
+itself. All allocation limits are checked server-side in a database transaction.
+
+### List money jars
+
+`GET /jars`
+
+Only active jars owned by the authenticated user are returned.
+
+### Create a money jar
+
+`POST /jars`
+
+```json
+{
+  "name": "Emergency fund",
+  "currency": "VND",
+  "spendingLimit": 5000000,
+  "color": "#0F8F72",
+  "icon": "shield-check",
+  "allowNegative": false
+}
+```
+
+The name is unique for each user. The jar starts with an allocated balance of
+zero; the amount cannot be sent in the create request.
+
+### Update or archive a money jar
+
+`PATCH /jars/{jarId}` and `DELETE /jars/{jarId}`
+
+A jar must be released to zero before it can be archived. Currency and
+allocated balance are immutable through the edit endpoint.
+
+### Allocate money to a jar
+
+`POST /jars/{jarId}/allocate`
+
+```json
+{
+  "amount": 500000
+}
+```
+
+The API locks the user's active wallets and jars before it calculates the
+remaining allocatable balance for that currency. It returns `409` if the
+request would allocate more than the real wallet balance that remains
+unassigned.
+
+### Release money from a jar
+
+`POST /jars/{jarId}/release`
+
+```json
+{
+  "amount": 200000
+}
+```
+
+The amount becomes available for another jar. The release is blocked if it
+would make a non-negative jar balance fall below zero.
+
+### Transfer an allocation between jars
+
+`POST /jars/transfers`
+
+```json
+{
+  "sourceJarId": "4eaedb4f-a6f9-4f6f-8148-6937182d25bd",
+  "destinationJarId": "8e67fbdf-6f2e-4fe2-b502-6d5e91e5f8f3",
+  "amount": 200000
+}
+```
+
+This rearranges an existing allocation only: it never creates a wallet
+transaction and does not change the total wallet balance. Both active jars
+must belong to the caller, use the same currency, and have different IDs. The
+source jar must have at least the requested allocated balance, even when it is
+configured to track a negative balance. The service locks the caller's active
+jars in a stable order, saves an outgoing and incoming movement together, and
+records one audit event in the same database transaction.
+
+## Allocation rules
+
+An allocation rule distributes a future income into money jars of the same
+currency. A user can keep multiple drafts, but only one rule per currency may
+be enabled. The percentages may be less than 100; the remainder stays available
+in the wallet.
+
+### List rules
+
+`GET /allocation-rules`
+
+### Create a rule
+
+`POST /allocation-rules`
+
+```json
+{
+  "name": "Monthly salary split",
+  "currency": "VND",
+  "enabled": true,
+  "items": [
+    { "jarId": "<emergency-jar-id>", "percentage": 20 },
+    { "jarId": "<travel-jar-id>", "percentage": 10 }
+  ]
+}
+```
+
+All jars must belong to the current user and use the specified currency. The
+combined percentage cannot exceed 100. Use `PATCH /allocation-rules/{ruleId}`
+to change the name, enabled state, or items, and `DELETE /allocation-rules/{ruleId}`
+to remove a rule.
+
+### Preview an income allocation
+
+`GET /allocation-rules/preview?walletId=<wallet-id>&amount=15000000`
+
+The response shows the enabled rule for that wallet currency, per-jar amounts,
+the total allocated amount, and the amount left unassigned. It does not change
+data.
+
+### Apply a rule when recording income
+
+Include `applyAllocationRule: true` in `POST /transactions` for an `INCOME`.
+The API rejects the request with `409` when there is no enabled rule for the
+wallet currency. The financial transaction, balanced ledger entries, jar
+balances, and `jar_movements` either all commit or all roll back together.
+
+## Monthly budgets
+
+A budget belongs to one expense category and one calendar month. Its actual
+spending is derived from posted expense transactions, never accepted from the
+client as an editable amount.
+
+### List a month
+
+`GET /budgets?period=2026-08`
+
+The optional `period` uses `YYYY-MM`; if omitted, the API uses the authenticated
+user's configured time zone to select the current month.
+
+Each response includes `limitAmount`, `spentAmount`, `remainingAmount`,
+`usagePercentage`, and status `ON_TRACK`, `WARNING`, or `EXCEEDED`.
+
+### Suggest budget limits from history
+
+`GET /budgets/suggestions?period=2026-08&currency=VND`
+
+Returns only categories without an active budget in the selected month. For
+each category, the service totals `POSTED` expenses in the same currency during
+the preceding three calendar months and proposes the rounded monthly average.
+Categories without recorded expenses are omitted.
+
+The endpoint is read-only. It never creates a budget or changes transactions;
+the client must send a separate `POST /budgets` after the user reviews and
+confirms a suggestion.
+
+```json
+[
+  {
+    "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+    "categoryName": "Food",
+    "periodStart": "2026-08-01",
+    "currency": "VND",
+    "historyMonths": 3,
+    "historicalExpenseTotal": 1800000,
+    "suggestedLimit": 600000,
+    "reason": "Average posted spending across the previous 3 months"
+  }
+]
+```
+
+### Create a budget
+
+`POST /budgets`
+
+```json
+{
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "periodStart": "2026-08-01",
+  "limitAmount": 3000000,
+  "currency": "VND",
+  "warningThreshold": 80
+}
+```
+
+`periodStart` must be the first day of a month. Only an available `EXPENSE`
+category can be used. An active budget is unique per user, category, and month.
+
+### Update or archive a budget
+
+`PATCH /budgets/{budgetId}` and `DELETE /budgets/{budgetId}`
+
+Only `limitAmount` and `warningThreshold` are editable. Archive returns `204 No
+Content`; it preserves historical transactions and allows a new plan to be
+created for the same category and month later.
+
+## Saving goals
+
+A saving goal is attached to one money jar. `currentAmount` is the jar's
+allocated balance, so the client cannot independently edit a second balance.
+
+### List saving goals
+
+`GET /saving-goals`
+
+The response includes progress, remaining amount, and an optional monthly
+contribution suggestion when a target date is provided.
+
+### Create a saving goal
+
+`POST /saving-goals`
+
+```json
+{
+  "jarId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "name": "Emergency fund",
+  "targetAmount": 30000000,
+  "targetDate": "2026-12-31"
+}
+```
+
+An active jar can have at most one open goal. If the jar allocation reaches the
+target, the API reports `COMPLETED` automatically.
+
+### Update or change goal status
+
+`PATCH /saving-goals/{goalId}` updates the name, target amount, or target date.
+
+`POST /saving-goals/{goalId}/status` accepts `ACTIVE`, `PAUSED`, or `CANCELLED`.
+`COMPLETED` is calculated from the linked jar and cannot be manually selected.
+
+## Transactions
+
+### Suggest a transaction draft from a short note
+
+`POST /transaction-drafts/suggestion`
+
+```json
+{
+  "text": "Ca phe 45k hom nay",
+  "currency": "VND",
+  "currentTransactionType": "EXPENSE"
+}
+```
+
+The response may include an inferred `suggestedTransactionType`, amount, local
+date, readable signals, and up to three visible category suggestions. It is a
+read-only helper: it does not create a transaction, change a wallet balance, or
+apply any form field until the authenticated user explicitly confirms it in the
+client. The baseline recognizes common Vietnamese amount suffixes such as `k`
+and `tr`, plus `hom nay` and `hom qua`.
+
+### List transactions
+
+`GET /transactions?page=0&size=10&transactionType=EXPENSE&query=coffee`
+
+All query parameters are optional. `page` is zero-based and `size` must be from
+1 to 50. `transactionType` can be any supported transaction type; `query`
+searches the description, notes, and category name. `from` and `to` accept ISO
+8601 timestamps, with `to` treated as exclusive.
+
+The response is a page object containing `content`, `page`, `size`,
+`totalElements`, and `totalPages`. Queries are owner-scoped and run at the
+database layer before the response is created.
+
+### Export transaction history as CSV
+
+`GET /transactions/export?transactionType=EXPENSE&query=coffee&from=2026-08-01T00:00:00Z&to=2026-09-01T00:00:00Z`
+
+Returns a `text/csv` attachment containing every transaction matching the same
+owner-scoped filters as the list endpoint, not only the page currently shown in
+the client. The file is UTF-8 with a BOM so Vietnamese text opens correctly in
+spreadsheet applications. Timestamps use the authenticated user's configured
+time zone. To protect the API from an unexpectedly large download, exports are
+limited to 10,000 rows; a wider request returns `409` with
+`TRANSACTION_EXPORT_LIMIT_EXCEEDED` and must be narrowed first.
+
+## Bank statement import
+
+### Preview a CSV statement
+
+`POST /statement-imports/preview`
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "incomeCategoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "expenseCategoryId": "6e4af9e4-79c4-41aa-86d7-fc9eb680ae49",
+  "csvText": "date,type,amount,description,notes\\n2026-08-01 09:00,INCOME,15000000,Salary,August"
+}
+```
+
+The required headers are `date`, `type`, `amount`, and `description`; `notes`
+is optional. The import accepts comma or semicolon delimiters, ISO or
+`dd/MM/yyyy` dates, and `INCOME`/`THU` or `EXPENSE`/`CHI` types. A request has a
+maximum of 200 rows and 200 KB of CSV text. The response labels every row as
+`READY`, `DUPLICATE`, or `INVALID`; it never writes financial data.
+
+### Confirm a CSV statement
+
+`POST /statement-imports/confirm`
+
+The request body is identical to the preview request. The API parses and
+validates the supplied file again. If any row is invalid, it returns an error
+and writes no rows. Otherwise it records each ready row through the normal
+transaction service and skips duplicated rows. A deterministic statement
+fingerprint is used as the transaction idempotency key, so retrying the same
+confirmation never changes a wallet balance twice. Raw CSV text is not stored.
+
+## Wallet reconciliation
+
+### Preview a statement balance reconciliation
+
+`POST /wallet-reconciliations/preview`
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "statementDate": "2026-08-26",
+  "statementBalance": 1250000
+}
+```
+
+The selected date is interpreted in the authenticated user's configured time
+zone. The API sums the wallet's ledger entries for transactions occurring before
+the next local day, then returns the ledger balance, statement balance,
+`difference = statementBalance - ledgerBalance`, and number of included
+transactions. `MATCHED` means the difference is exactly zero; `DIFFERENT` does
+not alter any wallet, transaction, ledger entry, or audit data. Future statement
+dates are rejected.
+
+### Confirm a reconciliation adjustment
+
+`POST /wallet-reconciliations/adjustments`
+
+```http
+Idempotency-Key: 83c1e7c5-a65a-4d4b-b031-76203118daef
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "statementDate": "2026-08-26",
+  "statementBalance": 1250000,
+  "reason": "Sao kê có phí ngân hàng chưa được nhập"
+}
+```
+
+This endpoint is deliberately separate from preview. It recalculates the
+historical ledger balance after acquiring the same financial write lock used by
+transactions. If a difference remains, it records one `ADJUSTMENT` transaction
+at the end of the selected local day, balanced wallet/external ledger entries,
+and an audit event containing the statement date, balances, and signed change.
+The request requires an `Idempotency-Key`; replaying it returns the original
+transaction and never changes a wallet twice. A matched statement returns
+`RECONCILIATION_ALREADY_MATCHED` instead of recording a zero-value adjustment.
+
+### Record income or expense
+
+`POST /transactions`
+
+```http
+Idempotency-Key: 4bf4c8cc-8c2d-4604-9262-8e7f64a967e1
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "transactionType": "EXPENSE",
+  "amount": 65000,
+  "description": "Lunch",
+  "notes": "Team meeting",
+  "occurredAt": "2026-08-26T05:30:00Z"
+}
+```
+
+Only `INCOME` and `EXPENSE` are currently accepted. The category must be
+visible to the user and have the matching type. Reusing the same
+`Idempotency-Key` returns the original recorded transaction instead of posting
+another balance change.
+
+### Transfer between wallets
+
+`POST /transactions/transfers`
+
+```http
+Idempotency-Key: b15a2272-3d91-4d5b-851d-6737c0d72a2c
+```
+
+```json
+{
+  "sourceWalletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "destinationWalletId": "2ee046e8-faa7-438d-b01a-3dcefc7712bf",
+  "amount": 500000,
+  "description": "Move cash to bank",
+  "notes": "Weekend deposit",
+  "occurredAt": "2026-08-27T03:30:00Z"
+}
+```
+
+The two wallets must be different, active, owned by the authenticated user,
+and use the same currency. The service locks both rows in a stable database
+order, checks the source balance, then records one `TRANSFER` and two opposite
+wallet ledger entries in one database transaction. It is therefore neither
+income nor expense and does not change total assets. Reversal restores both
+wallet balances through a new counter-transaction; the original transfer stays
+in the audit trail.
+
+### Reverse a transaction
+
+`POST /transactions/{transactionId}/reverse`
+
+The original transaction is marked reversed and a balanced counter-transaction
+is added. The original record is never deleted.
+
+## Recurring transaction rules
+
+### List rules
+
+`GET /recurring-rules`
+
+Rules are ordered by their next scheduled time and include the selected wallet,
+category, recurrence frequency, and whether automatic posting is enabled.
+
+### Review upcoming recurring rules
+
+`GET /recurring-rules/upcoming?limit=4`
+
+Returns 1 to 10 enabled rules for the authenticated user, ordered by their next
+scheduled time. It is a read-only dashboard helper: it can include a past-due
+rule so the user can see that an occurrence still needs to be recorded. The
+endpoint never posts a transaction or advances a rule schedule.
+
+### Create or update a rule
+
+`POST /recurring-rules` and `PATCH /recurring-rules/{ruleId}`
+
+```json
+{
+  "name": "Monthly rent",
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "categoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "transactionType": "EXPENSE",
+  "amount": 5000000,
+  "description": "Rent payment",
+  "frequency": "MONTHLY",
+  "nextRunAt": "2026-09-01T01:00:00Z",
+  "autoRecord": false,
+  "enabled": true,
+  "applyAllocationRule": false
+}
+```
+
+Only `INCOME` and `EXPENSE` rules are accepted. The wallet, category, and rule
+must belong to the authenticated user; the category type must match the rule
+type. Automatic posting is opt-in, so a new rule is a reminder by default.
+
+### Record a due occurrence or disable a rule
+
+`POST /recurring-rules/{ruleId}/record` records exactly one occurrence when the
+rule is due. `DELETE /recurring-rules/{ruleId}` disables the rule while keeping
+its history and configuration for auditability.
+
+The scheduler checks opted-in due rules every five minutes by default. Each
+occurrence uses a deterministic idempotency key derived from the rule and its
+scheduled timestamp. Concurrent scheduler runs or a retry therefore cannot post
+the same occurrence twice. After recording, the next run advances to the first
+future period; missed periods are not bulk-posted after downtime.
+
+## In-app financial notifications
+
+`GET /notifications` returns the authenticated user's current attention items.
+They are generated from real recurring-rule and monthly-budget state rather
+than being a separate financial workflow. An item includes a stable `key`,
+priority (`INFO`, `WARNING`, or `CRITICAL`), title/message, destination route,
+occurrence time, and whether the user has read it.
+
+- Enabled recurring rules appear when due or within the next three days.
+- A monthly budget appears only when it is in `WARNING` or `EXCEEDED` state.
+- Recording a recurring occurrence or returning a budget to normal naturally
+  removes the corresponding item. Reading an item never changes money, a
+  budget, or a recurring rule.
+
+`GET /notifications/unread-count` returns `{ "count": 2 }` for a compact UI
+indicator. To change only the read state, send one of:
+
+```http
+PATCH /notifications/read
+PATCH /notifications/unread
+```
+
+```json
+{ "notificationKey": "recurring:2f1a...:1787850000000" }
+```
+
+The key must still refer to a current notification owned by the authenticated
+user; otherwise the API returns `404 NOTIFICATION_NOT_FOUND`.
+
+## Split bills and reimbursements
+
+A split bill records one real expense first, then tracks only the money that
+other people need to reimburse. It never creates a second artificial balance.
+Each reimbursement is posted as a real `INCOME` transaction into the selected
+wallet, in the same database transaction that updates the receivable status.
+
+### List or view split bills
+
+`GET /split-bills` and `GET /split-bills/{billId}`
+
+Responses include the original expense transaction, the payer's own share,
+each participant's balance, payment history, and calculated status:
+`OPEN`, `PARTIALLY_SETTLED`, or `SETTLED`.
+
+### Create a split bill
+
+`POST /split-bills`
+
+```http
+Idempotency-Key: split-bill-2026-08-27-01
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "expenseCategoryId": "09d20e44-7963-48c4-a78f-6e970d87d2af",
+  "name": "Dinner with the project team",
+  "totalAmount": 900000,
+  "payerShareAmount": 300000,
+  "description": "Paid dinner for the team",
+  "occurredAt": "2026-08-27T12:00:00Z",
+  "participants": [
+    { "name": "An", "owedAmount": 300000 },
+    { "name": "Binh", "contact": "binh@example.com", "owedAmount": 300000 }
+  ]
+}
+```
+
+The payer share plus all participant shares must equal `totalAmount`. The API
+posts exactly one `EXPENSE` transaction and uses its ID as the immutable link
+to the split bill. `Idempotency-Key` is mandatory for this endpoint, so a
+network retry returns the original split bill instead of charging the wallet
+twice.
+
+### Record a reimbursement
+
+`POST /split-bills/{billId}/participants/{participantId}/payments`
+
+```http
+Idempotency-Key: split-payment-2026-08-27-01
+```
+
+```json
+{
+  "walletId": "a49d66c4-8765-4ac2-9ec3-9c4a21bbd73b",
+  "incomeCategoryId": "35cde5bf-5e55-4ce2-9c14-e6d7ad6b9cf0",
+  "amount": 100000,
+  "notes": "Bank transfer received",
+  "occurredAt": "2026-08-27T13:00:00Z"
+}
+```
+
+The service locks the split bill before checking the outstanding balance. A
+payment cannot exceed the participant's remaining amount. It creates one real
+`INCOME` transaction, persists the payment link, and recalculates participant
+and bill status atomically. Direct reversal is blocked for an active split-bill
+expense or linked reimbursement, preventing the ledger and receivable state
+from diverging.
+
+## Dashboard report
+
+### Get a financial dashboard
+
+`GET /reports/dashboard?period=2026-08`
+
+The optional `period` uses `YYYY-MM`; when omitted, the user's configured time
+zone determines the current month. The response contains per-currency wallet
+balances, jar allocations, monthly income and expense totals, active wallet/jar
+counts, budget alerts, open saving goals, and the five most recent transactions.
+Totals from different currencies are returned separately rather than converted
+with an unverified exchange rate.
+
+### Get transparent monthly insights
+
+`GET /reports/dashboard/insights?period=2026-08`
+
+The optional `period` follows the same `YYYY-MM` rule as the dashboard. The
+response ranks concise observations derived from the already-recorded cash flow,
+budget status, and saving-goal progress. It is read-only and explainable: it
+never changes a transaction, budget, wallet, or goal, and it does not claim to
+predict future financial outcomes.
+
+Each insight contains a stable `key`, `severity` (`INFO`, `SUCCESS`, `WARNING`,
+or `DANGER`), title, message, and the related currency/amount when applicable.
+
+### Review unusually large expenses
+
+`GET /reports/dashboard/unusual-expenses?period=2026-08`
+
+The optional `period` follows the dashboard `YYYY-MM` rule. The endpoint is
+read-only and only considers the authenticated user's `POSTED` expense
+transactions. For each expense in the requested month, it compares the amount
+with the average of expenses in the same category and currency during the three
+preceding months. A finding requires at least three historical transactions and
+an amount at least 2.5 times that average.
+
+The response contains the current amount, historical average, historical count,
+multiple, severity (`MEDIUM` or `HIGH`), and an explanatory reason. Findings
+are review prompts only: the endpoint never changes financial data and does not
+claim that a transaction is fraudulent.
+
+### Preview recurring cash flow
+
+`GET /reports/dashboard/cash-flow-forecast?days=30`
+
+Returns a read-only projection from the authenticated user's enabled recurring
+rules. `days` is optional (defaults to `30`) and must be from `7` to `90`.
+The result uses the user's configured time zone, keeps each currency separate,
+and contains projected income, expense, and net totals plus up to twelve
+nearest scheduled occurrences.
+
+This endpoint does not create transactions, reserve funds, or advance a
+recurring rule's `nextRunAt`. It is a deterministic schedule preview, not an
+exchange-rate conversion or a prediction of discretionary spending.
+
+### Review monthly cash-flow trend
+
+`GET /reports/dashboard/cash-flow-trend?months=6`
+
+Returns posted income and expense totals for each month in the requested
+window. `months` is optional (defaults to `6`) and must be from `3` to `12`.
+The current partial month is included, boundaries follow the user's configured
+time zone, and every currency is returned as a separate chronological series.
+
+The endpoint is read-only and reports recorded transactions only. It does not
+include recurring-rule forecasts, perform exchange-rate conversion, or modify
+any financial record.
+
+## Monthly review
+
+### Get a monthly review workspace
+
+`GET /monthly-reviews?period=2026-08`
+
+Returns the requested month in the authenticated user's time zone. Monetary
+facts are server-derived from posted transactions through the existing dashboard
+and insight services; they are not copied into a review record. The response
+contains per-currency monthly income, expense and net values, transparent
+insights, and the user's optional reflection and next-month focus.
+
+### Save a monthly reflection
+
+`PUT /monthly-reviews?period=2026-08`
+
+```json
+{
+  "reflection": "I kept eating-out spending within the planned budget.",
+  "nextMonthFocus": "Transfer 2,000,000 VND to my emergency fund on payday."
+}
+```
+
+At least one non-blank field is required. A user has one review per month; a
+later save updates only their note. This endpoint never creates a transaction,
+changes a wallet balance, updates a budget, or changes a savings goal.
+
+## Financial calendar
+
+### View a month of recorded and scheduled cash flow
+
+`GET /financial-calendar?period=2026-08`
+
+Returns all dates in the selected `YYYY-MM` month in the authenticated user's
+configured time zone. Each entry has a `kind`:
+
+- `ACTUAL` is a `POSTED` ledger transaction and therefore already affects a
+  wallet balance.
+- `SCHEDULED` is calculated from an enabled recurring rule. Only future
+  occurrences are returned; it is read-only and does not create a transaction,
+  reserve money, or advance the recurring rule.
+
+Recorded reversal entries remain visible as their own posted correction, while
+the reversed original is excluded. At most 500 posted records are returned for
+one month so the calendar remains a bounded read view rather than a transaction
+history export.
 
 ## Error format
 

@@ -1,2 +1,2 @@
-/** Read models and summaries for financial dashboards and exports. */
+/** Read-only user-facing financial reports composed through domain services. */
 package com.luuhoa.fincore.reporting;

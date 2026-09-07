@@ -4,7 +4,7 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/fincore}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/fincore}
     username: ${DB_USERNAME:fincore}
     password: ${DB_PASSWORD:fincore-local-only}
   jpa:
@@ -25,11 +25,18 @@ server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] [correlation_id=%X{correlationId:-}] %logger{36} - %msg%n"
+
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoint:
     health:
       probes:
@@ -37,11 +44,18 @@ management:
       show-details: when-authorized
 
 app:
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  observability:
+    request-logging-enabled: ${REQUEST_LOGGING_ENABLED:true}
   security:
+    auth-rate-limit:
+      max-attempts: ${AUTH_RATE_LIMIT_MAX_ATTEMPTS:10}
+      window: ${AUTH_RATE_LIMIT_WINDOW:PT1M}
     jwt:
       issuer: ${JWT_ISSUER:fincore-api}
       secret: ${JWT_SECRET:fincore-local-development-secret-change-me-2026}
       access-token-ttl: ${JWT_ACCESS_TOKEN_TTL:PT15M}
       refresh-token-ttl: ${JWT_REFRESH_TOKEN_TTL:P30D}
+  recurring:
+    fixed-delay: ${RECURRING_FIXED_DELAY:PT5M}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}

@@ -17,6 +17,26 @@
 5. Build, test, migration và API contract phải được kiểm tra trước merge.
 6. Chỉ merge `dev` vào `main` khi milestone đã được demo và xác nhận.
 
+## Kiểm tra tự động
+
+GitHub Actions chạy khi có pull request hoặc push vào `dev` và `main`:
+
+- Backend: Java 21 và `./mvnw test`.
+- PostgreSQL integration: chạy hai test Testcontainers với PostgreSQL thật để
+  xác nhận Flyway migration và Hibernate schema validation vẫn khởi động cùng nhau.
+- Frontend: Node.js 24, `npm ci`, `npm run lint` và `npm run build`.
+- Container: build image backend và frontend, nhưng không publish image hay dùng secret.
+- Production Compose contract: kiểm tra `docker-compose.production.yml` có thể render với
+  biến môi trường CI giả lập trước khi deploy.
+
+Workflow chỉ dùng quyền đọc repository, tự hủy lượt chạy cũ của cùng nhánh và
+giới hạn 15 phút cho test/build thông thường. CI tự chạy integration test
+PostgreSQL/Flyway trên GitHub-hosted runner; vẫn nên chạy lại trước merge khi
+máy có Docker Desktop theo hướng dẫn trong `README.md`.
+
+Container build chỉ xác nhận Dockerfile và build-time assets hợp lệ. Nó không
+thay cho smoke test chạy stack thật hoặc xác nhận secret production.
+
 ## Commit convention
 
 ```text

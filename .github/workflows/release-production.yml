@@ -1,0 +1,128 @@
+name: Release production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Approved Docker image tag to publish and deploy
+        required: true
+        default: stable
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: production-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Validate release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      image_owner: ${{ steps.metadata.outputs.image_owner }}
+      image_tag: ${{ steps.metadata.outputs.image_tag }}
+    steps:
+      - id: metadata
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production releases must be started from the main branch" >&2
+            exit 1
+          fi
+          tag='${{ inputs.image_tag }}'
+          if [[ ! "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]]; then
+            echo "image_tag must be a valid Docker tag" >&2
+            exit 1
+          fi
+          echo "image_owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$tag" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish production images
+    needs: prepare
+    runs-on: ubuntu-latest
+    outputs:
+      backend_image: ${{ steps.images.outputs.backend_image }}
+      web_image: ${{ steps.images.outputs.web_image }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: images
+        shell: bash
+        run: |
+          echo "backend_image=ghcr.io/${{ needs.prepare.outputs.image_owner }}/fincore-backend:${{ needs.prepare.outputs.image_tag }}" >> "$GITHUB_OUTPUT"
+          echo "web_image=ghcr.io/${{ needs.prepare.outputs.image_owner }}/fincore-web:${{ needs.prepare.outputs.image_tag }}" >> "$GITHUB_OUTPUT"
+      - name: Publish backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.images.outputs.backend_image }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Publish web image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./frontend
+          build-args: |
+            VITE_API_BASE_URL=/api/v1
+          push: true
+          tags: ${{ steps.images.outputs.web_image }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to protected production
+    needs: publish
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Configure deployment SSH key
+        shell: bash
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_SSH_PRIVATE_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - name: Pull approved images and verify readiness
+        shell: bash
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          BACKEND_IMAGE: ${{ needs.publish.outputs.backend_image }}
+          WEB_IMAGE: ${{ needs.publish.outputs.web_image }}
+        run: |
+          test -n "$DEPLOY_HOST"
+          test -n "$DEPLOY_USER"
+          test -n "$DEPLOY_PATH"
+          ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && \
+             APP_PORT=\$(sed -n 's/^APP_PORT=//p' .env.production | tail -n1) && \
+             APP_PORT=\${APP_PORT:-8080} && \
+             BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml pull && \
+             BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml up -d --no-build && \
+             curl --fail --silent --show-error http://localhost:\$APP_PORT/healthz && \
+             BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml exec -T backend wget -q -O - http://127.0.0.1:8080/actuator/health/readiness"

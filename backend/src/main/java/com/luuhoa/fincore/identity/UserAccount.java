@@ -108,4 +108,11 @@ public class UserAccount {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void updateProfile(String displayName, String preferredCurrency, String timeZone) {
+        this.displayName = displayName;
+        this.preferredCurrency = preferredCurrency;
+        this.timeZone = timeZone;
+        this.updatedAt = Instant.now();
+    }
 }

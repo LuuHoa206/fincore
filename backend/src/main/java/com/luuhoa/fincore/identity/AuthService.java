@@ -9,6 +9,7 @@ import java.util.Locale;
 import com.luuhoa.fincore.shared.api.ConflictException;
 import com.luuhoa.fincore.shared.api.ResourceNotFoundException;
 import com.luuhoa.fincore.shared.api.UnauthorizedException;
+import com.luuhoa.fincore.audit.AuditLogService;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,16 +26,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenService refreshTokenService;
+    private final AuditLogService auditLogService;
 
     public AuthService(
             UserAccountRepository userRepository,
             PasswordEncoder passwordEncoder,
             JwtTokenService jwtTokenService,
-            RefreshTokenService refreshTokenService) {
+            RefreshTokenService refreshTokenService,
+            AuditLogService auditLogService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
         this.refreshTokenService = refreshTokenService;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -57,6 +61,7 @@ public class AuthService {
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException("EMAIL_ALREADY_EXISTS", "An account already exists for this email");
         }
+        auditLogService.record(user, "ACCOUNT_REGISTERED", "USER", user.getId(), java.util.Map.of("method", "PASSWORD"));
         return issueTokenPair(user);
     }
 
@@ -68,6 +73,7 @@ public class AuthService {
                 || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw invalidCredentials();
         }
+        auditLogService.record(user, "LOGIN_SUCCEEDED", "USER", user.getId(), java.util.Map.of("method", "PASSWORD"));
         return issueTokenPair(user);
     }
 
@@ -96,6 +102,20 @@ public class AuthService {
         return userRepository.findById(userId)
                 .map(UserResponse::from)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+    }
+
+    @Transactional
+    public UserResponse updateProfile(java.util.UUID userId, UpdateProfileRequest request) {
+        UserAccount user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
+        user.updateProfile(
+                request.displayName().trim(),
+                normalizeCurrency(request.preferredCurrency()),
+                normalizeTimeZone(request.timeZone()));
+        auditLogService.record(user, "PROFILE_UPDATED", "USER", user.getId(), java.util.Map.of(
+                "preferredCurrency", user.getPreferredCurrency(),
+                "timeZone", user.getTimeZone()));
+        return UserResponse.from(user);
     }
 
     private AuthResponse issueTokenPair(UserAccount user) {

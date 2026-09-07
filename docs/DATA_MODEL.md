@@ -23,7 +23,8 @@ quá tiền khả dụng mà người dùng cho phép phân bổ.
 ## Nhóm kế hoạch
 
 - `categories`: danh mục thu và chi.
-- `budgets`: giới hạn chi theo tháng và danh mục.
+- `budgets`: giới hạn chi theo tháng và danh mục; số đã chi được tổng hợp từ
+  `financial_transactions`, không lưu trùng trong bảng ngân sách.
 - `saving_goals`: mục tiêu tiết kiệm, thường liên kết với một hũ.
 - `recurring_rules`: lịch tạo nhắc nhở hoặc giao dịch định kỳ.
 
@@ -45,7 +46,38 @@ Category 1---n Transaction
 MoneyJar 1---n JarMovement
 MoneyJar 1---0..1 SavingGoal
 Category 1---n Budget
+User 1---n SplitBill
+SplitBill 1---n SplitBillParticipant
+SplitBillParticipant 1---n SplitBillPayment
+Transaction 1---0..1 SplitBill (original expense)
+Transaction 1---0..1 SplitBillPayment (reimbursement)
 ```
+
+## Nhập sao kê CSV
+
+Nhập sao kê không tạo bảng riêng và không lưu nội dung file thô. Mỗi dòng hợp lệ
+được ghi nhận như một `Transaction` bình thường, kèm idempotency key ổn định có
+tiền tố `statement:`. Vì `user_id` và `idempotency_key` đã là duy nhất, việc gửi
+lại cùng một file chỉ bỏ qua dòng đã tồn tại, không làm thay đổi số dư lần hai.
+
+## Đối soát số dư ví
+
+Đối soát cũng không tạo bảng hay chỉnh sửa dữ liệu. Số dư trong hệ thống được
+tính từ tổng `ledger_entries.signed_amount` của một ví, thuộc đúng người dùng,
+với `financial_transactions.occurred_at` trước đầu ngày kế tiếp theo múi giờ
+của người dùng. Các bút toán đảo ngược vẫn được tính cùng bút toán gốc để tổng
+sổ cái luôn phản ánh đúng thực tế đã ghi nhận.
+
+## Nhóm chia hóa đơn
+
+- `split_bills`: khoản chi đã ghi vào sổ cái, phần của người trả và trạng thái khoản cần thu.
+- `split_bill_participants`: số tiền từng người cần hoàn, đã hoàn và còn lại.
+- `split_bill_payments`: liên kết mỗi lần hoàn tiền với giao dịch thu thật trong `financial_transactions`.
+
+`split_bills.expense_transaction_id` là duy nhất. Vì vậy một hóa đơn chia tiền
+luôn đối chiếu được với đúng một khoản chi. Mỗi
+`split_bill_payments.transaction_id` cũng duy nhất để một giao dịch thu không
+thể được gắn hai lần vào công nợ.
 
 ## Kiểu dữ liệu quan trọng
 
@@ -55,3 +87,28 @@ Category 1---n Budget
 - Thời gian nghiệp vụ: `TIMESTAMPTZ`, lưu theo UTC.
 - Ngày ngân sách: `DATE` hoặc cặp `year/month` tùy use case.
 - Entity thay đổi đồng thời có cột `version` cho optimistic locking.
+
+## Monthly review
+
+- `monthly_reviews`: one user reflection and next-month focus for each monthly
+  period. It intentionally contains no income, expense, balance, or budget
+  total; those values remain derived from the financial ledger at read time.
+- Unique key: `(user_id, period_start)`, which permits one editable review per
+  user and calendar month.
+
+## Financial calendar read model
+
+The financial calendar deliberately has no persisted table. Its days and
+entries are generated from `financial_transactions` with status `POSTED` and
+enabled `recurring_transaction_rules`. This keeps the calendar consistent with
+the ledger and rule schedule, without copying monetary facts into another
+mutable data store.
+
+## Statement reconciliation adjustments
+
+Reconciliation preview remains a derived read model and has no table. A user
+confirmed difference is persisted only as a normal `financial_transactions`
+row with type `ADJUSTMENT`, its two balanced `ledger_entries`, and one audit
+record. The statement date and amount that caused the correction are retained
+in the audit details; no raw statement document or separate mutable
+reconciliation balance is stored.
