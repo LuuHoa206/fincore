@@ -52,27 +52,25 @@ Requirements:
 - Node.js 22 or newer
 - PostgreSQL 16 or newer, or Docker Desktop
 
-1. Copy `.env.example` to `.env` and replace local-only passwords.
-2. Start PostgreSQL using the installed local service or `docker compose up -d`.
-3. Create database/user values matching `.env` when using local PostgreSQL.
-4. Start the backend:
+1. Copy `.env.example` to `.env` and replace local-only passwords. The default
+   PostgreSQL host port is `5433` so it does not conflict with another local
+   PostgreSQL service on `5432`.
+2. Start the isolated FinCore PostgreSQL container:
 
 ```powershell
-cd backend
-$env:JAVA_HOME = 'C:\Users\Admin\.jdks\ms-21.0.11'
-.\mvnw.cmd spring-boot:run
+docker compose up -d postgres
 ```
 
-5. Start the frontend:
+3. Start the web application with the local launcher. It loads `.env` only for
+   the processes it starts; secrets are never added to Windows permanently:
 
 ```powershell
-cd frontend
-npm install
-npm run dev
+.\scripts\start-local.ps1
 ```
 
 The frontend runs at `http://localhost:5173`; the backend runs at
-`http://localhost:8080`.
+`http://localhost:8080`. Use `-BackendOnly` or `-FrontendOnly` when you need
+to start just one process.
 
 ## Production deployment with Docker
 
