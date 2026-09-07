@@ -6,12 +6,12 @@ The backend exposes a deliberately small Actuator surface:
 
 | Endpoint | Access | Purpose |
 | --- | --- | --- |
-| `GET /actuator/health` | Public | Liveness/readiness check for a load balancer or platform. |
-| `GET /actuator/health/liveness` | Public | Confirms that the process is alive. |
-| `GET /actuator/health/readiness` | Public | Confirms that the application is ready to serve traffic. |
-| `GET /actuator/info` | Authenticated | Application information for operators. |
-| `GET /actuator/metrics` | Authenticated | Lists available Micrometer metrics. |
-| `GET /actuator/metrics/{name}` | Authenticated | Reads one metric, optionally filtered by tags. |
+| `GET /actuator/health` | Backend network | Liveness/readiness check for a platform or container orchestrator. |
+| `GET /actuator/health/liveness` | Backend network | Confirms that the process is alive. |
+| `GET /actuator/health/readiness` | Backend network | Confirms that the application is ready to serve traffic. |
+| `GET /actuator/info` | Backend network, authenticated | Application information for operators. |
+| `GET /actuator/metrics` | Backend network, authenticated | Lists available Micrometer metrics. |
+| `GET /actuator/metrics/{name}` | Backend network, authenticated | Reads one metric, optionally filtered by tags. |
 
 Health details are shown only to authenticated callers. Do not make `metrics`,
 `env`, `configprops`, `heapdump`, or `loggers` public: they can expose runtime
@@ -132,9 +132,14 @@ docker compose --env-file .env.production -f docker-compose.production.yml ps
 docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 backend
 ```
 
-5. Confirm `http://localhost:<APP_PORT>/healthz` and
-   `http://localhost:<APP_PORT>/api/v1/actuator/health/readiness` return success
-   before exposing the new version through the public proxy.
+5. Confirm the public gateway and private backend readiness before exposing the
+   new version through the public proxy:
+
+```sh
+curl -fsS http://localhost:<APP_PORT>/healthz
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T backend \
+  wget -q -O - http://127.0.0.1:8080/actuator/health/readiness
+```
 
 Terminate TLS at a managed load balancer or reverse proxy in front of the `web`
 service. Do not expose port 5432 or backend port 8080 directly to the Internet.
