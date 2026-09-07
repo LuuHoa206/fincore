@@ -5,6 +5,7 @@ const apiBaseUrl = (__ENV.BASE_URL || 'http://localhost:8080/api/v1').replace(/\
 const testPeriod = __ENV.TEST_PERIOD ? `?period=${encodeURIComponent(__ENV.TEST_PERIOD)}` : ''
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     authenticated_read_journey: {
       executor: 'ramping-vus',

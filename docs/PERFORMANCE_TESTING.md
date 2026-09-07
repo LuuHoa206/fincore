@@ -53,6 +53,11 @@ summary, application version, environment size, test date, and any relevant
 database data volume in a ticket or release note instead of committing test
 credentials or large raw artifacts.
 
+The raw summary includes `setup_data`, which can contain the short-lived access
+token used by the test account. Treat it as sensitive local output even though
+it expires and is excluded from Git. The reviewed baseline is kept in
+[Performance baseline](PERFORMANCE_BASELINE.md) without credentials or tokens.
+
 ## Run the financial idempotency benchmark
 
 Create a dedicated test wallet and an income category, then set their IDs. The
