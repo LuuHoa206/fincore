@@ -4,6 +4,7 @@ import { check, sleep } from 'k6'
 const apiBaseUrl = (__ENV.BASE_URL || 'http://localhost:8080/api/v1').replace(/\/+$/, '')
 
 export const options = {
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)', 'p(99)'],
   scenarios: {
     same_request_retries: {
       executor: 'ramping-vus',
