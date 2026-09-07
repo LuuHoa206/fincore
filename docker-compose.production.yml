@@ -15,6 +15,7 @@ services:
       retries: 20
 
   backend:
+    image: ${BACKEND_IMAGE:-fincore-backend:local}
     build:
       context: ./backend
     restart: unless-stopped
@@ -45,6 +46,7 @@ services:
       start_period: 30s
 
   web:
+    image: ${WEB_IMAGE:-fincore-web:local}
     build:
       context: ./frontend
       args:

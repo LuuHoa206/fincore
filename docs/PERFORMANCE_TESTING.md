@@ -12,6 +12,12 @@ The script never calls an endpoint that creates, reverses, transfers, or
 settles money. Do not use a personal account or production credentials. Use a
 dedicated account in staging or a disposable local environment.
 
+The separate `performance/k6/financial-write-idempotency.js` script is a
+controlled write benchmark. All virtual users send the same `Idempotency-Key`,
+so a run records exactly one VND 1 income while exercising simultaneous retry
+handling. Run it only against a disposable local or staging wallet and income
+category. It measures a safety-critical retry path, not normal write capacity.
+
 ## Prerequisites
 
 - A running FinCore API.
@@ -47,6 +53,25 @@ summary, application version, environment size, test date, and any relevant
 database data volume in a ticket or release note instead of committing test
 credentials or large raw artifacts.
 
+## Run the financial idempotency benchmark
+
+Create a dedicated test wallet and an income category, then set their IDs. The
+script writes a single VND 1 test income per run because every request shares
+one newly generated idempotency key:
+
+```powershell
+$env:BASE_URL = 'http://localhost:8080/api/v1'
+$env:TEST_EMAIL = 'performance-test@example.com'
+$env:TEST_PASSWORD = 'replace-with-a-test-password'
+$env:TEST_WALLET_ID = 'replace-with-test-wallet-uuid'
+$env:TEST_INCOME_CATEGORY_ID = 'replace-with-test-income-category-uuid'
+k6 run --summary-export .\performance\results\idempotency-baseline.json .\performance\k6\financial-write-idempotency.js
+```
+
+Before recording a result, confirm in transaction history that the run created
+one new transaction only. The PostgreSQL integration suite is the stronger
+correctness proof because it asserts the resulting ledger and balance directly.
+
 ## Docker alternative
 
 When Docker Desktop is available, pass the same variables into k6:
@@ -64,12 +89,19 @@ API host name or execute k6 from the same Docker network.
 
 ## Acceptance criteria and interpretation
 
-The baseline fails when one percent or more requests fail, fewer than 99% of
-checks pass, or the overall p95 request duration reaches 800 ms. These are
-initial guardrails, not a production capacity claim. Repeat the run after a
+The read baseline fails when one percent or more requests fail, fewer than 99%
+of checks pass, the overall p95 request duration reaches 800 ms, or p99 reaches
+1.5 seconds. The financial idempotency benchmark uses a p95 of 1.2 seconds and
+p99 of 2 seconds because it exercises database locks and a write commit. These
+are initial guardrails, not a production capacity claim. Repeat the run after a
 warm-up, compare only like-for-like environments, and inspect the backend
 correlation IDs, database metrics, and container CPU/memory before changing a
 threshold.
+
+Record p50, p95, p99, request failure rate, application commit, machine or
+container resources, PostgreSQL version, dataset size, and test date alongside
+each baseline. A result without this environment information is not comparable
+to a later run.
 
 The authentication request happens once during `setup`; do not raise virtual
 users by repeatedly logging in because the application intentionally rate-limits
