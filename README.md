@@ -87,11 +87,13 @@ cp .env.production.example .env.production
 docker compose --env-file .env.production -f docker-compose.production.yml up -d --build
 docker compose --env-file .env.production -f docker-compose.production.yml ps
 curl -fsS http://localhost:8080/healthz
-curl -fsS http://localhost:8080/api/v1/actuator/health/readiness
+docker compose --env-file .env.production -f docker-compose.production.yml exec -T backend \
+  wget -q -O - http://127.0.0.1:8080/actuator/health/readiness
 ```
 
-The two `curl` commands assume the default `APP_PORT=8080`; replace the port if
-you choose a different host port.
+The gateway check assumes the default `APP_PORT=8080`; replace the port if you
+choose a different host port. Backend readiness is checked from inside the
+private container because Nginx does not expose Actuator endpoints.
 
 For a public deployment, put a TLS-capable reverse proxy or managed load
 balancer in front of the web gateway, point it to `APP_PORT`, and set
