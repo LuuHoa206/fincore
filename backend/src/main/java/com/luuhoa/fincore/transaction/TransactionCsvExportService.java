@@ -59,13 +59,18 @@ public class TransactionCsvExportService {
 
         UserAccount user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User account was not found"));
-        String searchTerm = query == null || query.isBlank() ? null : query.trim();
+        String searchTerm = query == null || query.isBlank()
+                ? ""
+                : query.trim().toLowerCase(Locale.ROOT);
         var result = transactionRepository.searchByUser(
                 userId,
-                transactionType,
+                transactionType != null,
+                transactionType == null ? TransactionType.INCOME : transactionType,
                 searchTerm,
-                fromTime,
-                toTime,
+                fromTime != null,
+                fromTime == null ? Instant.EPOCH : fromTime,
+                toTime != null,
+                toTime == null ? Instant.EPOCH : toTime,
                 PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by(Sort.Direction.DESC, "occurredAt").and(Sort.by(Sort.Direction.DESC, "id"))));
         if (result.getTotalElements() > MAX_EXPORT_ROWS) {
             throw new ConflictException(

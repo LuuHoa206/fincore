@@ -35,19 +35,22 @@ public interface FinancialTransactionRepository extends JpaRepository<FinancialT
             from FinancialTransaction transaction
             left join transaction.category category
             where transaction.user.id = :userId
-              and (:transactionType is null or transaction.transactionType = :transactionType)
-              and (:searchTerm is null
-                   or lower(transaction.description) like lower(concat('%', :searchTerm, '%'))
-                   or lower(coalesce(transaction.notes, '')) like lower(concat('%', :searchTerm, '%'))
-                   or lower(coalesce(category.name, '')) like lower(concat('%', :searchTerm, '%')))
-              and (:fromTime is null or transaction.occurredAt >= :fromTime)
-              and (:toTime is null or transaction.occurredAt < :toTime)
+              and (:filterTransactionType = false or transaction.transactionType = :transactionType)
+              and (:searchTerm = ''
+                   or lower(transaction.description) like concat('%', :searchTerm, '%')
+                   or lower(coalesce(transaction.notes, '')) like concat('%', :searchTerm, '%')
+                   or lower(coalesce(category.name, '')) like concat('%', :searchTerm, '%'))
+              and (:filterFromTime = false or transaction.occurredAt >= :fromTime)
+              and (:filterToTime = false or transaction.occurredAt < :toTime)
             """)
     Page<FinancialTransaction> searchByUser(
             @Param("userId") UUID userId,
+            @Param("filterTransactionType") boolean filterTransactionType,
             @Param("transactionType") TransactionType transactionType,
             @Param("searchTerm") String searchTerm,
+            @Param("filterFromTime") boolean filterFromTime,
             @Param("fromTime") Instant fromTime,
+            @Param("filterToTime") boolean filterToTime,
             @Param("toTime") Instant toTime,
             Pageable pageable);
 

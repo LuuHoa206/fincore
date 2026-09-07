@@ -58,7 +58,16 @@ class TransactionCsvExportServiceTest {
         Wallet wallet = new Wallet(user, "Ví tiền mặt", WalletType.CASH, "VND", false);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(transactionRepository.searchByUser(eq(userId), eq(TransactionType.EXPENSE), eq("cà phê"), eq(null), eq(null), any()))
+        when(transactionRepository.searchByUser(
+                eq(userId),
+                eq(true),
+                eq(TransactionType.EXPENSE),
+                eq("cà phê"),
+                eq(false),
+                eq(Instant.EPOCH),
+                eq(false),
+                eq(Instant.EPOCH),
+                any()))
                 .thenReturn(new PageImpl<>(List.of(transaction), PageRequest.of(0, 10_000), 1));
         when(ledgerEntryRepository.findAllByTransactionIdInAndAccountKindWithWallet(List.of(transactionId), AccountKind.WALLET))
                 .thenReturn(List.of(LedgerEntry.walletEntry(transaction, wallet, new BigDecimal("-35000"))));
@@ -81,7 +90,16 @@ class TransactionCsvExportServiceTest {
         UUID userId = UUID.randomUUID();
         UserAccount user = new UserAccount("user@example.com", "hash", "User", "VND", "Asia/Ho_Chi_Minh");
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(transactionRepository.searchByUser(eq(userId), eq(null), eq(null), eq(null), eq(null), any()))
+        when(transactionRepository.searchByUser(
+                eq(userId),
+                eq(false),
+                eq(TransactionType.INCOME),
+                eq(""),
+                eq(false),
+                eq(Instant.EPOCH),
+                eq(false),
+                eq(Instant.EPOCH),
+                any()))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10_000), 10_001));
 
         assertThatThrownBy(() -> service().export(userId, null, null, null, null))
