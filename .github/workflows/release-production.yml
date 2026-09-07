@@ -48,11 +48,11 @@ jobs:
       backend_image: ${{ steps.images.outputs.backend_image }}
       web_image: ${{ steps.images.outputs.web_image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -63,7 +63,7 @@ jobs:
           echo "backend_image=ghcr.io/${{ needs.prepare.outputs.image_owner }}/fincore-backend:${{ needs.prepare.outputs.image_tag }}" >> "$GITHUB_OUTPUT"
           echo "web_image=ghcr.io/${{ needs.prepare.outputs.image_owner }}/fincore-web:${{ needs.prepare.outputs.image_tag }}" >> "$GITHUB_OUTPUT"
       - name: Publish backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
@@ -74,7 +74,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Publish web image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           build-args: |
