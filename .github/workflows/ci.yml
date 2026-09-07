@@ -49,8 +49,8 @@ jobs:
           cache: maven
       - name: Confirm Docker is available for Testcontainers
         run: docker version --format '{{.Server.Version}}'
-      - name: Verify PostgreSQL, Flyway and JPA schema
-        run: bash ./mvnw test "-Dtest=FinCoreBackendApplicationTests,DatabaseMigrationIntegrationTests"
+      - name: Verify PostgreSQL, Flyway, JPA schema and financial concurrency
+        run: bash ./mvnw test "-Dtest=FinCoreBackendApplicationTests,DatabaseMigrationIntegrationTests,TransactionConcurrencyIntegrationTests"
 
   frontend:
     name: Frontend quality

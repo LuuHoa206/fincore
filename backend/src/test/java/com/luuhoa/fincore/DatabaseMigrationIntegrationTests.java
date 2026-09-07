@@ -30,7 +30,7 @@ class DatabaseMigrationIntegrationTests {
     @Test
     void appliesTheCurrentSchemaIncludingSplitBillTables() {
         assertThat(flyway.info().current()).isNotNull();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("16");
 
         List<String> tables = jdbcTemplate.queryForList(
                 "select table_name from information_schema.tables "
