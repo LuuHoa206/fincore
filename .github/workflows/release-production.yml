@@ -125,4 +125,4 @@ jobs:
              BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml pull && \
              BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml up -d --no-build && \
              curl --fail --silent --show-error http://localhost:\$APP_PORT/healthz && \
-             curl --fail --silent --show-error http://localhost:\$APP_PORT/api/v1/actuator/health/readiness"
+             BACKEND_IMAGE='$BACKEND_IMAGE' WEB_IMAGE='$WEB_IMAGE' docker compose --env-file .env.production -f docker-compose.production.yml exec -T backend wget -q -O - http://127.0.0.1:8080/actuator/health/readiness"

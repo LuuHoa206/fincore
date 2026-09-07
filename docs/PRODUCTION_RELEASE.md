@@ -60,8 +60,9 @@ upgrade from an older PostgreSQL major version requires a database backup or
 2. Open GitHub Actions, choose **Release production**, select `main`, and use
    the default image tag `stable` or an approved release tag.
 3. Approve the protected environment. The workflow publishes both images,
-   pulls them on the server, restarts the stack without rebuilding, and checks
-   the public gateway and readiness endpoint.
+   pulls them on the server, restarts the stack without rebuilding, checks the
+   public gateway, and checks readiness from inside the private backend
+   container. The actuator endpoint is not exposed through Nginx.
 4. Verify the browser login flow and inspect the service state:
 
 ```sh
